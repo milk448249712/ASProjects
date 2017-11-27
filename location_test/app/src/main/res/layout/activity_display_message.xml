@@ -13,6 +13,6 @@
         android:layout_height="wrap_content"
         android:cursorVisible="false"
         android:editable="false"
-        android:id="@+id/editText"/>
+        android:id="@+id/editText_2"/>
 
 </RelativeLayout>
