@@ -1,5 +1,6 @@
 package com.unnkai.location_test;
 
+import android.Manifest;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -29,6 +30,7 @@ import android.provider.Settings;
 
 import com.google.android.gms.location.LocationServices;
 
+// https://www.cnblogs.com/android-blogs/p/5718479.html
 public class MainActivity extends AppCompatActivity {
     public final static String EXTRA_MESSAGE = "com.example.myfirstapp.MESSAGE";
 
@@ -42,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         lm.removeUpdates(locationListener);
     }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,12 +64,17 @@ public class MainActivity extends AppCompatActivity {
 
         // 为获取地理位置信息时设置查询条件
         String bestProvider = lm.getBestProvider(getCriteria(), true);
+        Toast.makeText(this, bestProvider, Toast.LENGTH_SHORT).show();
         // 获取位置信息
         // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManager.GPS_PROVIDER
+        if(!checkLocationPermission()) {
+            Toast.makeText(this, "gps permission check failed...", Toast.LENGTH_SHORT).show();
+            return;
+        }
         Location location = lm.getLastKnownLocation(bestProvider);
         updateView(location);
         // 监听状态
-        lm.addGpsStatusListener(listener);
+        // lm.addGpsStatusListener(listener);
         // 绑定监听，有4个参数
         // 参数1，设备：有GPS_PROVIDER和NETWORK_PROVIDER两种
         // 参数2，位置信息更新周期，单位毫秒
@@ -78,6 +86,20 @@ public class MainActivity extends AppCompatActivity {
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
 
+    }
+    private boolean checkLocationPermission() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return false;
+        } else {
+            return true;
+        }
     }
 
     // 位置监听
@@ -118,6 +140,9 @@ public class MainActivity extends AppCompatActivity {
          * GPS开启时触发
          */
         public void onProviderEnabled(String provider) {
+            if(!checkLocationPermission()) {
+                return;
+            }
             Location location = lm.getLastKnownLocation(provider);
             updateView(location);
         }
@@ -132,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     // 状态监听
-    GpsStatus.Listener listener = new GpsStatus.Listener() {
+    /*GpsStatus.Listener listener = new GpsStatus.Listener() {
         public void onGpsStatusChanged(int event) {
             switch (event) {
                 // 第一次定位
@@ -166,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
             }
         };
-    };
+    };*/
 
     /**
      * 实时更新文本内容
