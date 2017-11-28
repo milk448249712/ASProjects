@@ -28,7 +28,7 @@ import android.widget.Toast;
 import android.util.Log;
 import android.provider.Settings;
 
-import com.google.android.gms.location.LocationServices;
+// import com.google.android.gms.location.LocationServices;
 
 // https://www.cnblogs.com/android-blogs/p/5718479.html
 public class MainActivity extends AppCompatActivity {
@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         // TODO Auto-generated method stub
         super.onDestroy();
-        lm.removeUpdates(locationListener);
+        //lm.removeUpdates(locationListener);
     }
 
     @Override
@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
             startActivityForResult(intent_gps_set, 0);
             return;
         }
-
+        Toast.makeText(this, "provider:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
         // 为获取地理位置信息时设置查询条件
         String bestProvider = lm.getBestProvider(getCriteria(), true);
         Toast.makeText(this, bestProvider, Toast.LENGTH_SHORT).show();
