@@ -61,10 +61,10 @@ public class MainActivity extends AppCompatActivity {
             startActivityForResult(intent_gps_set, 0);
             return;
         }
-        Toast.makeText(this, "provider:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
+
         // 为获取地理位置信息时设置查询条件
         String bestProvider = lm.getBestProvider(getCriteria(), true);
-        Toast.makeText(this, bestProvider, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "bestProvider:"+bestProvider, Toast.LENGTH_SHORT).show();
         // 获取位置信息
         // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManager.GPS_PROVIDER
         if(!checkLocationPermission()) {
@@ -84,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
-        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000, 1, locationListener);
 
     }
     private boolean checkLocationPermission() {
@@ -108,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
         /**
          * 位置信息变化时触发
          */
+        @Override
         public void onLocationChanged(Location location) {
             updateView(location);
             Log.i(TAG, "时间：" + location.getTime());
@@ -119,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
         /**
          * GPS状态变化时触发
          */
+        @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
             switch (status) {
                 // GPS状态为可见时
@@ -139,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
         /**
          * GPS开启时触发
          */
+        @Override
         public void onProviderEnabled(String provider) {
             if(!checkLocationPermission()) {
                 return;
@@ -150,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
         /**
          * GPS禁用时触发
          */
+        @Override
         public void onProviderDisabled(String provider) {
             updateView(null);
         }
@@ -200,12 +204,14 @@ public class MainActivity extends AppCompatActivity {
      */
     private void updateView(Location location) {
         if (location != null) {
+            Toast.makeText(this, "provider 3:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
             editText.setText("设备位置信息\n\n经度：");
             editText.append(String.valueOf(location.getLongitude()));
             editText.append("\n纬度：");
             editText.append(String.valueOf(location.getLatitude()));
         } else {
             // 清空EditText对象
+            Toast.makeText(this, "provider 4:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
             editText.getEditableText().clear();
         }
     }
