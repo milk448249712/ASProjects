@@ -28,9 +28,13 @@ import android.widget.Toast;
 import android.util.Log;
 import android.provider.Settings;
 
+import java.util.List;
+
+
 // import com.google.android.gms.location.LocationServices;
 
 // https://www.cnblogs.com/android-blogs/p/5718479.html
+// http://blog.csdn.net/u013334392/article/details/52459635
 public class MainActivity extends AppCompatActivity {
     public final static String EXTRA_MESSAGE = "com.example.myfirstapp.MESSAGE";
 
@@ -52,6 +56,11 @@ public class MainActivity extends AppCompatActivity {
 
         editText = (EditText) findViewById(R.id.editText);
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        List<String> list = lm.getAllProviders();
+        for(String c : list) {
+            System.out.println("LocationManager provider:" + c);
+            Toast.makeText(this, "LocationManager provider:" + c, Toast.LENGTH_SHORT).show();
+        }
 
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -67,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "bestProvider:"+bestProvider, Toast.LENGTH_SHORT).show();
         // 获取位置信息
         // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManager.GPS_PROVIDER
-        if(!checkLocationPermission()) {
+        if(!checkLocationFinePermission()) {
             Toast.makeText(this, "gps permission check failed...", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -84,10 +93,24 @@ public class MainActivity extends AppCompatActivity {
 
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
-        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000, 1, locationListener);
+        lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 3000, 0, locationListener);
 
     }
-    private boolean checkLocationPermission() {
+    private boolean checkLocationFinePermission() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return false;
+        } else {
+            return true;
+        }
+    }
+    private boolean checkLocationCoarsePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
@@ -143,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
          */
         @Override
         public void onProviderEnabled(String provider) {
-            if(!checkLocationPermission()) {
+            if(!checkLocationFinePermission()) {
                 return;
             }
             Location location = lm.getLastKnownLocation(provider);
@@ -160,43 +183,6 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
-    // 状态监听
-    /*GpsStatus.Listener listener = new GpsStatus.Listener() {
-        public void onGpsStatusChanged(int event) {
-            switch (event) {
-                // 第一次定位
-                case GpsStatus.GPS_EVENT_FIRST_FIX:
-                    Log.i(TAG, "第一次定位");
-                    break;
-                // 卫星状态改变
-                case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
-                    Log.i(TAG, "卫星状态改变");
-                    // 获取当前状态
-                    GpsStatus gpsStatus = lm.getGpsStatus(null);
-                    // 获取卫星颗数的默认最大值
-                    int maxSatellites = gpsStatus.getMaxSatellites();
-                    // 创建一个迭代器保存所有卫星
-                    Iterator<GpsSatellite> iters = gpsStatus.getSatellites()
-                            .iterator();
-                    int count = 0;
-                    while (iters.hasNext() && count <= maxSatellites) {
-                        GpsSatellite s = iters.next();
-                        count++;
-                    }
-                    System.out.println("搜索到：" + count + "颗卫星");
-                    break;
-                // 定位启动
-                case GpsStatus.GPS_EVENT_STARTED:
-                    Log.i(TAG, "定位启动");
-                    break;
-                // 定位结束
-                case GpsStatus.GPS_EVENT_STOPPED:
-                    Log.i(TAG, "定位结束");
-                    break;
-            }
-        };
-    };*/
-
     /**
      * 实时更新文本内容
      *
@@ -211,8 +197,22 @@ public class MainActivity extends AppCompatActivity {
             editText.append(String.valueOf(location.getLatitude()));
         } else {
             // 清空EditText对象
-            Toast.makeText(this, "provider 4:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
             editText.getEditableText().clear();
+            if (!lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                return;
+            }
+            if(!checkLocationCoarsePermission()) {
+                Toast.makeText(this, "network permission check failed...", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Location location_network = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            if (location_network != null) {
+                Toast.makeText(this, "provider net:"+LocationManager.NETWORK_PROVIDER, Toast.LENGTH_SHORT).show();
+                editText.setText("设备位置信息\n\n经度：");
+                editText.append(String.valueOf(location_network.getLongitude()));
+                editText.append("\n纬度：");
+                editText.append(String.valueOf(location_network.getLatitude()));
+            }
         }
     }
 
