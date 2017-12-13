@@ -96,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
         lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 3000, 0, locationListener);
 
     }
+
     private boolean checkLocationFinePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
