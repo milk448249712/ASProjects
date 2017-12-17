@@ -2,6 +2,9 @@ package com.unnkai.location_test;
 
 import android.Manifest;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
@@ -55,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText editText;
     private LocationManager lm;
     private static final String TAG = "GpsActivity";
+    //private Handler handler=null;
 
     @Override
     protected void onDestroy() {
@@ -67,15 +71,19 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.i(TAG, "onCreate");
 
         editText = (EditText) findViewById(R.id.editText);
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        List<String> list = lm.getAllProviders();
-        for(String c : list) {
-            System.out.println("LocationManager provider:" + c);
-            Toast.makeText(this, "LocationManager provider:" + c, Toast.LENGTH_SHORT).show();
-        }
+        //MyQueryLocationThread myQueryThread = new MyQueryLocationThread(this);
+        //myQueryThread.start();
+        /*handler=new Handler();
+        new Thread(){
+            public void run(){
 
+                handler.post(runnableUi);
+            }
+        }.start();*/
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             Toast.makeText(this, "请开启GPS导航...", Toast.LENGTH_SHORT).show();
@@ -148,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
          */
         @Override
         public void onLocationChanged(Location location) {
+            Log.i(TAG, "onLocationChanged");
             updateView(location);
             Log.i(TAG, "时间：" + location.getTime());
             Log.i(TAG, "经度：" + location.getLongitude());
@@ -160,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
          */
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
+            Log.i(TAG, "onStatusChanged");
             switch (status) {
                 // GPS状态为可见时
                 case LocationProvider.AVAILABLE:
@@ -181,6 +191,7 @@ public class MainActivity extends AppCompatActivity {
          */
         @Override
         public void onProviderEnabled(String provider) {
+            Log.i(TAG, "onProviderEnabled");
             if(!checkLocationFinePermission()) {
                 return;
             }
@@ -205,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void updateView(Location location) {
         if (location != null) {
-            Toast.makeText(this, "provider 3:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "provider test123:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
             editText.setText("设备位置信息\n\n经度：");
             editText.append(String.valueOf(location.getLongitude()));
             editText.append("\n纬度：");
@@ -406,4 +417,46 @@ public class MainActivity extends AppCompatActivity {
         }
         return resultString;
     }
+    /*// 构建Runnable对象，在runnable中更新界面
+    Runnable   runnableUi=new  Runnable(){
+        @Override
+        public void run() {
+            for (int i = 0; i < 10; i++) {
+                //更新界面
+                editText.setText("the Content is:" + i);
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    };*/
+    /*public class MyQueryLocationThread extends Thread {
+        MyQueryLocationThread(Context context) {
+            m_mainContext = context;
+
+        }
+        Context m_mainContext;
+        //继承Thread类，并改写其run方法
+        private final static String TAG = "My Thread ===> ";
+        public void run(){
+            Log.d(TAG, "run");
+
+            for(int i = 0; i<10; i++)
+            {
+                Log.e(TAG, Thread.currentThread().getName() + "run tread i =  " + i);
+                EditText editTextInTread = (EditText) findViewById(R.id.editText);
+                editTextInTread.setText("run tread i ="+i);
+                //Toast.makeText(getApplicationContext(), "provider 3:"+String.valueOf(i), Toast.LENGTH_SHORT).show();
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }
+    }*/
 }
