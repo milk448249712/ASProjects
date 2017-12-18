@@ -59,6 +59,12 @@ public class MainActivity extends AppCompatActivity {
     private LocationManager lm;
     private static final String TAG = "GpsActivity";
     //private Handler handler=null;
+    //在handler中更新UI
+    private Handler mHandler = new Handler(){
+        public void handleMessage(Message msg) {
+            editText.setText("你想变的内容");
+        };
+    };
 
     @Override
     protected void onDestroy() {
@@ -75,8 +81,9 @@ public class MainActivity extends AppCompatActivity {
 
         editText = (EditText) findViewById(R.id.editText);
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        //MyQueryLocationThread myQueryThread = new MyQueryLocationThread(this);
-        //myQueryThread.start();
+        MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
+        myQueryThread.start();
+
         /*handler=new Handler();
         new Thread(){
             public void run(){
@@ -115,19 +122,12 @@ public class MainActivity extends AppCompatActivity {
 
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
-        lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 3000, 0, locationListener);
+        lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 3*1000, 0, locationListener);
 
     }
 
     private boolean checkLocationFinePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return false;
         } else {
             return true;
@@ -135,13 +135,6 @@ public class MainActivity extends AppCompatActivity {
     }
     private boolean checkLocationCoarsePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return false;
         } else {
             return true;
@@ -216,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void updateView(Location location) {
         if (location != null) {
-            Toast.makeText(this, "provider test123:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
+            //Toast.makeText(this, "provider test123:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
             editText.setText("设备位置信息\n\n经度：");
             editText.append(String.valueOf(location.getLongitude()));
             editText.append("\n纬度：");
@@ -432,23 +425,21 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };*/
-    /*public class MyQueryLocationThread extends Thread {
-        MyQueryLocationThread(Context context) {
+    public class MyQueryLocationThread extends Thread {
+        /*MyQueryLocationThread(Context context) {
             m_mainContext = context;
 
         }
-        Context m_mainContext;
+        Context m_mainContext;*/
         //继承Thread类，并改写其run方法
         private final static String TAG = "My Thread ===> ";
         public void run(){
             Log.d(TAG, "run");
-
             for(int i = 0; i<10; i++)
             {
                 Log.e(TAG, Thread.currentThread().getName() + "run tread i =  " + i);
-                EditText editTextInTread = (EditText) findViewById(R.id.editText);
-                editTextInTread.setText("run tread i ="+i);
-                //Toast.makeText(getApplicationContext(), "provider 3:"+String.valueOf(i), Toast.LENGTH_SHORT).show();
+                Message message = new Message();
+                mHandler.sendMessage(message);
                 try {
                     Thread.sleep(3000);
                 } catch (InterruptedException e) {
@@ -458,5 +449,5 @@ public class MainActivity extends AppCompatActivity {
             }
 
         }
-    }*/
+    }
 }
