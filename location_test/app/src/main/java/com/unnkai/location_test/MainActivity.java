@@ -58,11 +58,20 @@ public class MainActivity extends AppCompatActivity {
     private EditText editText;
     private LocationManager lm;
     private static final String TAG = "GpsActivity";
+    private int cnt = 0;
     //private Handler handler=null;
     //在handler中更新UI
     private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
-            editText.setText("你想变的内容");
+            Location newLoc = (Location)msg.obj;
+            //editText.setText("你想变的内容:"+msg.obj);
+            editText.setText(cnt+"设备位置信息\n\n经度：");
+            if (newLoc!=null) {
+                editText.append(String.valueOf(newLoc.getLongitude()));
+                editText.append("\n纬度：");
+                editText.append(String.valueOf(newLoc.getLatitude()));
+            }
+            cnt++;
         };
     };
 
@@ -122,7 +131,8 @@ public class MainActivity extends AppCompatActivity {
 
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
-        lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 3*1000, 0, locationListener);
+
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3*1000, 0, locationListener);
 
     }
 
@@ -150,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onLocationChanged(Location location) {
             Log.i(TAG, "onLocationChanged");
-            updateView(location);
+            //updateView(location);
             Log.i(TAG, "时间：" + location.getTime());
             Log.i(TAG, "经度：" + location.getLongitude());
             Log.i(TAG, "纬度：" + location.getLatitude());
@@ -435,10 +445,15 @@ public class MainActivity extends AppCompatActivity {
         private final static String TAG = "My Thread ===> ";
         public void run(){
             Log.d(TAG, "run");
-            for(int i = 0; i<10; i++)
+            for(int i = 0; i<10000; i++)
             {
                 Log.e(TAG, Thread.currentThread().getName() + "run tread i =  " + i);
+                if(!checkLocationFinePermission()) {
+                    continue;
+                }
+                Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 Message message = new Message();
+                message.obj = newLoc;
                 mHandler.sendMessage(message);
                 try {
                     Thread.sleep(3000);
