@@ -1,6 +1,7 @@
 package com.unnkai.location_test;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
@@ -70,7 +71,11 @@ public class MainActivity extends AppCompatActivity {
                 editText.append(String.valueOf(newLoc.getLongitude()));
                 editText.append("\n纬度：");
                 editText.append(String.valueOf(newLoc.getLatitude()));
+                editText.append("\nLocal is not null");
+            } else {
+                getLocationFromGsm(editText);
             }
+
             cnt++;
         };
     };
@@ -227,7 +232,8 @@ public class MainActivity extends AppCompatActivity {
         } else {
             // 清空EditText对象
             editText.getEditableText().clear();
-            if (!lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+
+            /*if (!lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 return;
             }
             if(!checkLocationCoarsePermission()) {
@@ -241,7 +247,7 @@ public class MainActivity extends AppCompatActivity {
                 editText.append(String.valueOf(location_network.getLongitude()));
                 editText.append("\n纬度：");
                 editText.append(String.valueOf(location_network.getLatitude()));
-            }
+            }*/
         }
     }
 
@@ -420,21 +426,42 @@ public class MainActivity extends AppCompatActivity {
         }
         return resultString;
     }
-    /*// 构建Runnable对象，在runnable中更新界面
-    Runnable   runnableUi=new  Runnable(){
-        @Override
-        public void run() {
-            for (int i = 0; i < 10; i++) {
-                //更新界面
-                editText.setText("the Content is:" + i);
-                try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+    /** 显示结果 */
+    private void showResult(SCell cell, String location,EditText cellText) {
+        // TextView cellText = (TextView) findViewById(R.id.editText);
+        //cellText.setText(String.format("基站信息：mcc:%d, mnc:%d, lac:%d, cid:%d",
+        //    cell.MCC, cell.MNC, cell.LAC, cell.CID));
+        cellText.append(String.format("基站信息：mcc:%d, mnc:%d, lac:%d, cid:%d",
+                cell.MCC, cell.MNC, cell.LAC, cell.CID));
+        // TextView locationText = (TextView) findViewById(R.id.lacationText);
+        cellText.append("\n物理位置：" + location);
+    }
+    private void getLocationFromGsm(EditText editText) {
+        ProgressDialog mProgressDialog = new ProgressDialog(this);
+        mProgressDialog.setMessage("正在获取中...");
+        mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        mProgressDialog.show();
+        try {
+            /** 获取基站数据 */
+            SCell cell = getCellInfo();
+            /** 根据基站数据获取经纬度 */
+            SItude itude = getItude(cell);
+            /** 获取地理位置 */
+            String location = getLocation(itude);
+            /** 显示结果 */
+            showResult(cell, location,editText);
+            /** 关闭对话框 */
+            mProgressDialog.dismiss();
         }
-    };*/
+        catch (Exception e) {
+            /** 关闭对话框 */
+            mProgressDialog.dismiss();
+            /** 显示错误 */
+            // TextView cellText = (TextView) findViewById(R.id.editText);
+            editText.setText(e.getMessage());
+            Log.e("Error", e.getMessage());
+        }
+    }
     public class MyQueryLocationThread extends Thread {
         /*MyQueryLocationThread(Context context) {
             m_mainContext = context;
