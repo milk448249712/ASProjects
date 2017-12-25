@@ -47,6 +47,7 @@ import org.json.JSONObject;
 import org.apache.http.entity.StringEntity;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -66,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GpsActivity";
     private int cnt = 0;
     private long lastGpsTime = 0;
+    private locInfoFile latlnLog = new locInfoFile("log");
     //private Handler handler=null;
     //在handler中更新UI
     private Handler mHandler = new Handler(){
@@ -91,7 +93,8 @@ public class MainActivity extends AppCompatActivity {
                 String strAdde = getPositionByGeocoder(newLoc);
                 editText.append("\n\n地址："+strAdde);
             }
-
+            Log.d("file", "ready to write...");
+            latlnLog.writeFile(String.valueOf(newLoc.getLongitude())+","+String.valueOf(newLoc.getLatitude()));
             cnt++;
         };
     };
