@@ -42,14 +42,19 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.EncodingUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.apache.http.entity.StringEntity;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -67,7 +72,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GpsActivity";
     private int cnt = 0;
     private long lastGpsTime = 0;
-    private locInfoFile latlnLog = new locInfoFile("log");
+    // private locInfoFile latlnLog = new locInfoFile("log");
+
+
     //private Handler handler=null;
     //在handler中更新UI
     private Handler mHandler = new Handler(){
@@ -94,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
                 editText.append("\n\n地址："+strAdde);
             }
             Log.d("file", "ready to write...");
-            latlnLog.writeFile(String.valueOf(newLoc.getLongitude())+","+String.valueOf(newLoc.getLatitude()));
+            // latlnLog.writeFile(String.valueOf(newLoc.getLongitude())+","+String.valueOf(newLoc.getLatitude()));
             cnt++;
         };
     };
@@ -116,6 +123,18 @@ public class MainActivity extends AppCompatActivity {
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
         myQueryThread.start();
+
+        try {
+            FileInputStream fin = openFileInput("location_test_log.txt");
+            int length = fin.available();
+            byte [] buffer = new byte[length];
+            fin.read(buffer);
+            String res = EncodingUtils.getString(buffer, "UTF-8");
+            Log.d("file", "create file res:"+res);
+            fin.close();
+        } catch (Exception e) {
+            Log.d("file", "FileNotFoundException readfile",e);
+        }
 
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -152,6 +171,42 @@ public class MainActivity extends AppCompatActivity {
 
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10*1000, 0, locationListener);
 
+        File m_file = new File(this.getFilesDir().getPath().toString()+"/location_test_log.txt");
+        // m_file.setWritable(true);
+        /*if(m_file.exists()) {
+            Log.d("file", "create file exists...");
+        } else {
+            Log.d("file", "create file not exists...");
+            try {
+                m_file.createNewFile();
+            } catch (IOException e) {
+                Log.d("file", "create fileIOException",e);
+            }
+        }*/
+        /*String string = "Hello world!dugdfngfmgh";
+        FileOutputStream outputStream = null;
+        try {
+            outputStream = new FileOutputStream(m_file);
+        } catch (FileNotFoundException e) {
+            Log.d("file", "FileNotFoundException1",e);
+        }
+        Log.d("file", "create file...");
+        try {
+            Log.d("file", "create file2...");
+            // outputStream = openFileOutput(this.getFilesDir().getPath().toString()+"/location_test_log", Context.MODE_PRIVATE);
+            //outputStream = openFileOutput("location_test_log", Context.MODE_PRIVATE);
+            Log.d("file", "create file3...");
+            outputStream.write(string.getBytes());
+            Log.d("file", "create file4...");
+            outputStream.flush();
+            outputStream.close();
+            Log.d("file", "create file5...");
+        } catch (Exception e) {
+            Log.d("file", "create file6...");
+            Log.d("file", "FileNotFoundException2",e);
+            e.printStackTrace();
+        }
+        Log.d("file","create file7..."+this.getFilesDir().getPath().toString());*/
     }
 
     private boolean checkLocationFinePermission() {

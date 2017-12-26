@@ -18,7 +18,7 @@ public class locInfoFile extends AppCompatActivity {
         try {
             m_file = new File(m_filename);
             // Make sure log file is exists
-            if (!m_file.exists()) {
+            /*if (!m_file.exists()) {
                 Log.d("file", "file not exsit...");
                 boolean result; // 文件是否创建成功
                 try {
@@ -32,9 +32,10 @@ public class locInfoFile extends AppCompatActivity {
                     Log.d("file", "file create failed...");
                     return;
                 }
-            }
+            }*/
             m_outputStream = openFileOutput(m_filename, this.MODE_PRIVATE);
         } catch (Exception e) {
+            Log.d("file", "ioexc",e);
             e.printStackTrace();
         }
     }
@@ -53,6 +54,7 @@ public class locInfoFile extends AppCompatActivity {
             m_outputStream.flush();
             m_outputStream.close();
         } catch (Exception e) {
+            Log.d("file", "writeFile",e);
             e.printStackTrace();
         }
     }
