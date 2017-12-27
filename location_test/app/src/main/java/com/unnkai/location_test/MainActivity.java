@@ -6,61 +6,41 @@ import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.telephony.gsm.GsmCellLocation;
-import android.view.View;
 import android.widget.EditText;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.Criteria;
-import android.location.GpsSatellite;
-import android.location.GpsStatus;
-import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
-import android.net.Uri;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.content.Intent;
-import android.view.ViewGroup;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.util.Log;
 import android.provider.Settings;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EncodingUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.apache.http.entity.StringEntity;
-
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-
-// import com.google.android.gms.location.LocationServices;
 
 // https://www.cnblogs.com/android-blogs/p/5718479.html
 // http://blog.csdn.net/u013334392/article/details/52459635
@@ -72,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "GpsActivity";
     private int cnt = 0;
     private long lastGpsTime = 0;
-    // private locInfoFile latlnLog = new locInfoFile("log");
+    private locInfoFile latlnLog = null;
 
 
     //private Handler handler=null;
@@ -80,16 +60,20 @@ public class MainActivity extends AppCompatActivity {
     private Handler mHandler = new Handler(){
         public void handleMessage(Message msg) {
             Location newLoc = (Location)msg.obj;
-            //editText.setText("你想变的内容:"+msg.obj);
             editText.setText(cnt+"设备位置信息\n\n经度：");
+            String locType = "";
+            SimpleDateFormat formatter   =   new   SimpleDateFormat   ("yyyy-MM-dd HH:mm:ss");
+            Date curDate =  new Date(System.currentTimeMillis());
+            String strDate = formatter.format(curDate);
             if (newLoc!=null && newLoc.getTime()!=lastGpsTime) {
                 editText.append(String.valueOf(newLoc.getLongitude()));
                 editText.append("\n纬度：");
                 editText.append(String.valueOf(newLoc.getLatitude()));
-                editText.append("\nLocal is not null");
+                editText.append("\ndata from gps");
                 lastGpsTime = newLoc.getTime();
                 String strAdde = getPositionByGeocoder(newLoc);
                 editText.append("\n\n地址："+strAdde);
+                locType = "gps";
             } else {
                 newLoc = getBestLocation(lm);
                 editText.setText(cnt+"设备位置信息\n\n经度：");
@@ -99,9 +83,14 @@ public class MainActivity extends AppCompatActivity {
                 editText.append("\ndata from network");
                 String strAdde = getPositionByGeocoder(newLoc);
                 editText.append("\n\n地址："+strAdde);
+                locType = "net";
             }
-            Log.d("file", "ready to write...");
-            // latlnLog.writeFile(String.valueOf(newLoc.getLongitude())+","+String.valueOf(newLoc.getLatitude()));
+            String buf2File = String.valueOf(newLoc.getLongitude())+","+String.valueOf(newLoc.getLatitude()+","+locType+","+strDate);
+            Log.d("file",buf2File);
+            latlnLog.writeInerFile(buf2File+"\n");
+            if (cnt%3 == 0) {
+                Log.d("file",latlnLog.readInerFile());
+            }
             cnt++;
         };
     };
@@ -118,23 +107,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Log.i(TAG, "onCreate");
+        latlnLog = new locInfoFile("location_test_log.txt",this);
 
         editText = (EditText) findViewById(R.id.editText);
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
         myQueryThread.start();
 
-        try {
-            FileInputStream fin = openFileInput("location_test_log.txt");
-            int length = fin.available();
-            byte [] buffer = new byte[length];
-            fin.read(buffer);
-            String res = EncodingUtils.getString(buffer, "UTF-8");
-            Log.d("file", "create file res:"+res);
-            fin.close();
-        } catch (Exception e) {
-            Log.d("file", "FileNotFoundException readfile",e);
-        }
 
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -170,43 +149,9 @@ public class MainActivity extends AppCompatActivity {
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
 
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10*1000, 0, locationListener);
-
-        File m_file = new File(this.getFilesDir().getPath().toString()+"/location_test_log.txt");
-        // m_file.setWritable(true);
-        /*if(m_file.exists()) {
-            Log.d("file", "create file exists...");
-        } else {
-            Log.d("file", "create file not exists...");
-            try {
-                m_file.createNewFile();
-            } catch (IOException e) {
-                Log.d("file", "create fileIOException",e);
-            }
-        }*/
-        /*String string = "Hello world!dugdfngfmgh";
-        FileOutputStream outputStream = null;
-        try {
-            outputStream = new FileOutputStream(m_file);
-        } catch (FileNotFoundException e) {
-            Log.d("file", "FileNotFoundException1",e);
-        }
-        Log.d("file", "create file...");
-        try {
-            Log.d("file", "create file2...");
-            // outputStream = openFileOutput(this.getFilesDir().getPath().toString()+"/location_test_log", Context.MODE_PRIVATE);
-            //outputStream = openFileOutput("location_test_log", Context.MODE_PRIVATE);
-            Log.d("file", "create file3...");
-            outputStream.write(string.getBytes());
-            Log.d("file", "create file4...");
-            outputStream.flush();
-            outputStream.close();
-            Log.d("file", "create file5...");
-        } catch (Exception e) {
-            Log.d("file", "create file6...");
-            Log.d("file", "FileNotFoundException2",e);
-            e.printStackTrace();
-        }
-        Log.d("file","create file7..."+this.getFilesDir().getPath().toString());*/
+        latlnLog.writeInerFile("红鸡公尾巴红。。。\n");
+        String locInof = latlnLog.readInerFile();
+        Log.d("file",locInof);
     }
 
     private boolean checkLocationFinePermission() {

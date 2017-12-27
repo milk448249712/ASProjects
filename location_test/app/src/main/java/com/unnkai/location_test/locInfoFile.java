@@ -3,39 +3,33 @@ package com.unnkai.location_test;
 import android.content.Context;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.widget.Toast;
-
+import org.apache.http.util.EncodingUtils;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
+
 
 public class locInfoFile extends AppCompatActivity {
     File m_file;
     String m_filename;
     FileOutputStream m_outputStream;
-    locInfoFile(String filename) {
+    Context mainCtx;
+    locInfoFile(String filename,Context ctx) {
         m_filename = filename;
+        mainCtx = ctx;
+        Log.d("file",m_filename);
         try {
-            m_file = new File(m_filename);
-            // Make sure log file is exists
-            /*if (!m_file.exists()) {
-                Log.d("file", "file not exsit...");
-                boolean result; // 文件是否创建成功
-                try {
-                    result = m_file.createNewFile();
-                } catch (IOException e) {
-                    Log.d("file", "ioexc",e);
-                    e.printStackTrace();
-                    return;
-                }
-                if (!result) {
-                    Log.d("file", "file create failed...");
-                    return;
-                }
-            }*/
-            m_outputStream = openFileOutput(m_filename, this.MODE_PRIVATE);
+            m_file = new File(mainCtx.getFilesDir().getPath().toString()+"/"+m_filename);
+            Log.d("file",m_file.getPath());
+            m_outputStream = null;
+            try {
+                m_outputStream = new FileOutputStream(m_file );
+            } catch (FileNotFoundException e) {
+                Log.e("file", "FileNotFoundException",e);
+            }
         } catch (Exception e) {
-            Log.d("file", "ioexc",e);
+            Log.e("file", "ioexc",e);
             e.printStackTrace();
         }
     }
@@ -47,15 +41,28 @@ public class locInfoFile extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-    public void writeFile(String buffer) {
+    public void writeInerFile(String buffer) {
         try {
-            Log.d("file", "write...");
             m_outputStream.write(buffer.getBytes());
             m_outputStream.flush();
-            m_outputStream.close();
+            Log.d("file", "write file...");
         } catch (Exception e) {
-            Log.d("file", "writeFile",e);
+            Log.e("file", "Exception",e);
             e.printStackTrace();
+        }
+    }
+    public String readInerFile() {
+        try {
+            FileInputStream fin = mainCtx.openFileInput(m_filename);
+            int length = fin.available();
+            byte [] buffer = new byte[length];
+            fin.read(buffer);
+            String res = EncodingUtils.getString(buffer, "UTF-8");
+            fin.close();
+            return res;
+        } catch (Exception e) {
+            Log.d("file", "FileNotFoundException readfile",e);
+            return "error\n";
         }
     }
 }
