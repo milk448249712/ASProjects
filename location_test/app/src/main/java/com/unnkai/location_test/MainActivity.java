@@ -33,14 +33,18 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.apache.http.entity.StringEntity;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
 
 // https://www.cnblogs.com/android-blogs/p/5718479.html
 // http://blog.csdn.net/u013334392/article/details/52459635
@@ -53,8 +57,6 @@ public class MainActivity extends AppCompatActivity {
     private int cnt = 0;
     private long lastGpsTime = 0;
     private locInfoFile latlnLog = null;
-
-
     //private Handler handler=null;
     //在handler中更新UI
     private Handler mHandler = new Handler(){
@@ -87,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
             }
             String buf2File = String.valueOf(newLoc.getLongitude())+","+String.valueOf(newLoc.getLatitude()+","+locType+","+strDate);
             Log.d("file",buf2File);
+            //connectServerWithTCPSocket("test123");
             latlnLog.writeInerFile(buf2File+"\n");
             if (cnt%3 == 0) {
                 Log.d("file",latlnLog.readInerFile());
@@ -94,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
             cnt++;
         };
     };
-
     @Override
     protected void onDestroy() {
         // TODO Auto-generated method stub
@@ -109,12 +111,12 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate");
         latlnLog = new locInfoFile("location_test_log.txt",this);
 
+        Toast.makeText(this, "socket 3", Toast.LENGTH_SHORT).show();
         editText = (EditText) findViewById(R.id.editText);
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
-        myQueryThread.start();
-
-
+        //MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
+        // myQueryThread.start();
+        new Thread(networkTask).start();
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             Toast.makeText(this, "请开启GPS导航...", Toast.LENGTH_SHORT).show();
@@ -123,7 +125,6 @@ public class MainActivity extends AppCompatActivity {
             startActivityForResult(intent_gps_set, 0);
             return;
         }
-
         // 为获取地理位置信息时设置查询条件
         String bestProvider = lm.getBestProvider(getCriteria(), true);
         Toast.makeText(this, "bestProvider:"+bestProvider, Toast.LENGTH_SHORT).show();
@@ -153,6 +154,61 @@ public class MainActivity extends AppCompatActivity {
         String locInof = latlnLog.readInerFile();
         Log.d("file",locInof);
     }
+    Handler handlerSocket = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            //Bundle data = msg.getData();
+            //String val = data.getString("value");
+            //Log.i("mylog", "请求结果为-->" + val);
+            editText.setText(cnt+"设备位置信息\n\n经度：");
+            locInfoDetail newLoc = (locInfoDetail) msg.obj;
+            editText.append(String.valueOf(newLoc.longitude));
+            editText.append("\n纬度：");
+            editText.append(String.valueOf(newLoc.latitude));
+            editText.append("\ndata from" + newLoc.locType);
+            editText.append("\n\n地址："+newLoc.strAddr);
+            cnt++;
+        }
+    };
+    Runnable networkTask = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            for(int i = 0; i<10000; i++)
+            {
+                Log.e(TAG, Thread.currentThread().getName() + "run tread i =  " + i);
+                if(!checkLocationFinePermission()) {
+                    continue;
+                }
+                Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                Message message = new Message();
+                //message.obj = newLoc;
+                //mHandler.sendMessage(message);
+                parseLocToUI(newLoc);
+                locInfoDetail stlocInfoTmp = parseLocToUI(newLoc);
+                message.obj = stlocInfoTmp;
+                //handlerSocket.sendMessage(message);
+                handlerSocket.sendMessage(message);
+                connectServerWithTCPSocket(stlocInfoTmp);
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            /*
+            Message msg = new Message();
+            Bundle data = new Bundle();
+            data.putString("value", "请求结果");
+            msg.setData(data);
+            handlerSocket.sendMessage(msg);*/
+        }
+    };
 
     private boolean checkLocationFinePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -171,10 +227,7 @@ public class MainActivity extends AppCompatActivity {
 
     // 位置监听
     private LocationListener locationListener = new LocationListener() {
-
-        /**
-         * 位置信息变化时触发
-         */
+        /** 位置信息变化时触发*/
         @Override
         public void onLocationChanged(Location location) {
             Log.i(TAG, "onLocationChanged");
@@ -186,9 +239,7 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "海拔：" + location.getAltitude());
         }
 
-        /**
-         * GPS状态变化时触发
-         */
+        /**GPS状态变化时触发*/
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
             Log.i(TAG, "onStatusChanged");
@@ -207,7 +258,6 @@ public class MainActivity extends AppCompatActivity {
                     break;
             }
         }
-
         /**
          * GPS开启时触发
          */
@@ -220,7 +270,6 @@ public class MainActivity extends AppCompatActivity {
             Location location = lm.getLastKnownLocation(provider);
             updateView(location);
         }
-
         /**
          * GPS禁用时触发
          */
@@ -231,11 +280,7 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
-    /**
-     * 实时更新文本内容
-     *
-     * @param location
-     */
+    /**实时更新文本内容* @param location*/
     private void updateView(Location location) {
         if (location != null) {
             //Toast.makeText(this, "provider test123:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
@@ -247,29 +292,10 @@ public class MainActivity extends AppCompatActivity {
             // 清空EditText对象
             editText.getEditableText().clear();
             editText.setText("location is null...");
-            /*if (!lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                return;
-            }
-            if(!checkLocationCoarsePermission()) {
-                Toast.makeText(this, "network permission check failed...", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            Location location_network = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-            if (location_network != null) {
-                Toast.makeText(this, "provider net:"+LocationManager.NETWORK_PROVIDER, Toast.LENGTH_SHORT).show();
-                editText.setText("设备位置信息\n\n经度：");
-                editText.append(String.valueOf(location_network.getLongitude()));
-                editText.append("\n纬度：");
-                editText.append(String.valueOf(location_network.getLatitude()));
-            }*/
         }
     }
 
-    /**
-     * 返回查询条件
-     *
-     * @return
-     */
+    /*** 返回查询条件*/
     private Criteria getCriteria() {
         Criteria criteria = new Criteria();
         // 设置定位精确度 Criteria.ACCURACY_COARSE比较粗略，Criteria.ACCURACY_FINE则比较精细
@@ -309,15 +335,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return result;
     }
-    /** Called when the user clicks the Send button */
-    /*public void sendMessage(View view) {
-        // Do something in response to button
-        Intent intent = new Intent(this, DisplayMessageActivity.class);
-        EditText editText = (EditText) findViewById(R.id.edit_message);
-        String message = editText.getText().toString();
-        intent.putExtra(EXTRA_MESSAGE, message);
-        startActivity(intent);
-    }*/
 
     /*基站信息结构体 */
     public class SCell {
@@ -365,7 +382,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Address address = addresses.get(0);
             ArrayList<String> addressFragments = new ArrayList<String>();
-
             // Fetch the address lines using getAddressLine,
             // join them, and send them to the thread.
             for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
@@ -384,11 +400,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public class MyQueryLocationThread extends Thread {
-        /*MyQueryLocationThread(Context context) {
-            m_mainContext = context;
-
-        }
-        Context m_mainContext;*/
         //继承Thread类，并改写其run方法
         private final static String TAG = "My Thread ===> ";
         public void run(){
@@ -413,9 +424,70 @@ public class MainActivity extends AppCompatActivity {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
             }
-
         }
     }
+    private class locInfoDetail{
+        public double longitude;
+        public double latitude;
+        public String locType;
+        public String strAddr;
+        public String strDate;
+    }
+    private locInfoDetail parseLocToUI(Location newLoc) {
+        // Location newLoc = (Location)msg.obj;
+        // editText.setText(cnt+"设备位置信息\n\n经度：");
+        locInfoDetail stLocInfoDetail = new locInfoDetail();
+        String locType = "";
+        SimpleDateFormat formatter   =   new   SimpleDateFormat   ("yyyy-MM-dd HH:mm:ss");
+        Date curDate =  new Date(System.currentTimeMillis());
+        String strDate = formatter.format(curDate);
+        if (newLoc!=null && newLoc.getTime()!=lastGpsTime) {
+            /*editText.append(String.valueOf(newLoc.getLongitude()));
+            editText.append("\n纬度：");
+            editText.append(String.valueOf(newLoc.getLatitude()));
+            editText.append("\ndata from gps");
+            lastGpsTime = newLoc.getTime();
+            String strAdde = getPositionByGeocoder(newLoc);
+            editText.append("\n\n地址："+strAdde);
+            locType = "gps";*/
+            stLocInfoDetail.latitude = newLoc.getLatitude();
+            stLocInfoDetail.longitude = newLoc.getLongitude();
+            stLocInfoDetail.locType = "gps";
+            stLocInfoDetail.strAddr = getPositionByGeocoder(newLoc);
+            stLocInfoDetail.strDate = strDate;
+            lastGpsTime = newLoc.getTime();
+        } else {
+            newLoc = getBestLocation(lm);
+            stLocInfoDetail.latitude = newLoc.getLatitude();
+            stLocInfoDetail.longitude = newLoc.getLongitude();
+            stLocInfoDetail.locType = "network";
+            stLocInfoDetail.strAddr = getPositionByGeocoder(newLoc);
+            stLocInfoDetail.strDate = strDate;
+        }
+        return stLocInfoDetail;
+    }
+
+     private void connectServerWithTCPSocket(locInfoDetail locInfo) {
+         Socket socket;
+         try {// 创建一个Socket对象，并指定服务端的IP及端口号
+             socket = new Socket("192.168.0.104", 6666);
+             /** 或创建一个报文，使用BufferedWriter写入,看你的需求 **/
+            //String socketData = "[2143213;21343fjks;213]";
+             String socketData = String.valueOf(locInfo.longitude)+";"+String.valueOf(locInfo.latitude)+";"+locInfo.strAddr+";"+locInfo.locType+";"+locInfo.strDate;
+             //String socketData = locInfo.strAddr;
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(),"gb2312"));
+            writer.write(socketData);
+            writer.flush();
+             //Toast.makeText(this, "socket 2", Toast.LENGTH_SHORT).show();
+             /************************************************/
+         } catch (Exception e) {
+             Log.e("socket error 1", String.valueOf(e),e);
+             //Toast.makeText(this, "socket 1", Toast.LENGTH_SHORT).show();
+             e.printStackTrace();
+         } /*catch (IOException e) {
+             Log.d("socket error 2", String.valueOf(e));
+             e.printStackTrace();
+         }*/
+     }
 }
