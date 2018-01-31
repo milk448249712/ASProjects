@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private int cnt = 0;
     private long lastGpsTime = 0;
     private locInfoFile latlnLog = null;
+    gsm_location getHttp = new gsm_location();
     //private Handler handler=null;
     //在handler中更新UI
     private Handler mHandler = new Handler(){
@@ -93,8 +94,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Log.i(TAG, "onCreate");
         latlnLog = new locInfoFile("location_test_log.txt",this);
-
-        Toast.makeText(this, "socket 3", Toast.LENGTH_SHORT).show();
         editText = (EditText) findViewById(R.id.editText);
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         //MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
@@ -167,6 +166,9 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
                 Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                String httpStr = getHttp.get("http://192.168.1.4:80/interface.html","123test");
+                // Toast.makeText(this, httpStr, Toast.LENGTH_SHORT).show();
+                Log.d("httpStr",httpStr);
                 Message message = new Message();
                 //message.obj = newLoc;
                 //mHandler.sendMessage(message);
