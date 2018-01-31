@@ -1,7 +1,6 @@
 package com.unnkai.location_test;
 
 import android.Manifest;
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
@@ -9,8 +8,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.telephony.TelephonyManager;
-import android.telephony.gsm.GsmCellLocation;
 import android.widget.EditText;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -23,23 +20,10 @@ import android.support.v4.app.ActivityCompat;
 import android.widget.Toast;
 import android.util.Log;
 import android.provider.Settings;
-/*import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;*/
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.apache.http.entity.StringEntity;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -103,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         //lm.removeUpdates(locationListener);
     }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -145,10 +128,8 @@ public class MainActivity extends AppCompatActivity {
         // 参数3，位置变化最小距离：当位置距离变化超过此值时，将更新位置信息
         // 参数4，监听
         // 备注：参数2和3，如果参数3不为0，则以参数3为准；参数3为0，则通过时间来定时更新；两者为0，则随时刷新
-
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
-
         lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10*1000, 0, locationListener);
         latlnLog.writeInerFile("红鸡公尾巴红。。。\n");
         String locInof = latlnLog.readInerFile();
@@ -258,9 +239,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
             }
         }
-        /**
-         * GPS开启时触发
-         */
+        /** GPS开启时触发*/
         @Override
         public void onProviderEnabled(String provider) {
             Log.i(TAG, "onProviderEnabled");
@@ -270,14 +249,11 @@ public class MainActivity extends AppCompatActivity {
             Location location = lm.getLastKnownLocation(provider);
             updateView(location);
         }
-        /**
-         * GPS禁用时触发
-         */
+        /*** GPS禁用时触发*/
         @Override
         public void onProviderDisabled(String provider) {
             updateView(null);
         }
-
     };
 
     /**实时更新文本内容* @param location*/
@@ -335,7 +311,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return result;
     }
-
     /*基站信息结构体 */
     public class SCell {
         public int MCC;
@@ -391,14 +366,9 @@ public class MainActivity extends AppCompatActivity {
             if(addressFragments.size() > 0) {
                 strPositon = addressFragments.get(0);
             }
-            /*int add_cnt = 0;
-            for(String addr : addressFragments) {
-                Toast.makeText(this,"geo pos "+add_cnt+":"+addr,Toast.LENGTH_SHORT).show();
-            }*/
         }
         return strPositon;
     }
-
     public class MyQueryLocationThread extends Thread {
         //继承Thread类，并改写其run方法
         private final static String TAG = "My Thread ===> ";
@@ -479,15 +449,9 @@ public class MainActivity extends AppCompatActivity {
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(),"gb2312"));
             writer.write(socketData);
             writer.flush();
-             //Toast.makeText(this, "socket 2", Toast.LENGTH_SHORT).show();
-             /************************************************/
          } catch (Exception e) {
              Log.e("socket error 1", String.valueOf(e),e);
-             //Toast.makeText(this, "socket 1", Toast.LENGTH_SHORT).show();
              e.printStackTrace();
-         } /*catch (IOException e) {
-             Log.d("socket error 2", String.valueOf(e));
-             e.printStackTrace();
-         }*/
+         }
      }
 }
