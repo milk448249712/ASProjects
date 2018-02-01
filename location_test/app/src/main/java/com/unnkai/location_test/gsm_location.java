@@ -78,7 +78,7 @@ public class gsm_location {
             JSONObject locJson = new JSONObject();
             try {
                 locJson.put("lat",123.456);
-                locJson.put("addr","北京");
+                locJson.put("addr","beijing");
             } catch (JSONException e) {
                 e.printStackTrace();
             }
