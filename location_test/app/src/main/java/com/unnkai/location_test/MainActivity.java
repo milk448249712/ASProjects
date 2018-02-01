@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Handler;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.location.LocationProvider;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -13,9 +16,6 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.Criteria;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.location.LocationProvider;
 import android.support.v4.app.ActivityCompat;
 import android.widget.Toast;
 import android.util.Log;
@@ -166,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
                 Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                String httpStr = getHttp.get("http://192.168.1.4:80/interface.html","123test");
+                String httpStr = getHttp.post("http://172.16.24.67:80/php_info.php","123test");
                 // Toast.makeText(this, httpStr, Toast.LENGTH_SHORT).show();
                 Log.d("httpStr",httpStr);
                 Message message = new Message();
@@ -177,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
                 message.obj = stlocInfoTmp;
                 //handlerSocket.sendMessage(message);
                 handlerSocket.sendMessage(message);
-                connectServerWithTCPSocket(stlocInfoTmp);
+                //connectServerWithTCPSocket(stlocInfoTmp); // send socket data
                 try {
                     Thread.sleep(3000);
                 } catch (InterruptedException e) {
