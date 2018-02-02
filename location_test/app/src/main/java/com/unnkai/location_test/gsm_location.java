@@ -2,6 +2,7 @@ package com.unnkai.location_test;
 import android.content.Context;
 import android.telephony.TelephonyManager;
 import android.telephony.gsm.GsmCellLocation;
+import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -9,6 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.sql.Connection;
@@ -62,18 +64,26 @@ public class gsm_location {
             url = new URL(strURL);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
-            connection.setConnectTimeout(8000);
-            connection.setReadTimeout(8000);
-            connection.setRequestProperty("Charset", "utf-8");
+            //connection.setConnectTimeout(8000);
+            //connection.setReadTimeout(8000);
             // 设置容许输出
             connection.setDoOutput(true);
+            connection.setDoInput(true);
             connection.setUseCaches(false);
+            connection.setInstanceFollowRedirects(true);
+            //connection.setRequestProperty("Content-Type","application/json;charset=UTF-8");
+            connection.setRequestProperty("Content-Type","application/json");
+            //connection.setRequestProperty("Content-Type","text/html");
+            //connection.setRequestProperty("Accept-Charset", "utf-8");
+            //connection.setRequestProperty("contentType", "utf-8");
             OutputStream outStrm = connection.getOutputStream();
-            ObjectOutputStream objOutputStrm = new ObjectOutputStream(outStrm);
+            // ObjectOutputStream objOutputStrm = new ObjectOutputStream(outStrm);
+            PrintWriter objOutputStrm = new PrintWriter(connection.getOutputStream());
             // writeObject should be a json object
-            // objOutputStrm.writeObject(new String("我是测试数据"));
-            //String sendData = "test我是测47548aaaa试数据hhh";
-            //sendData = URLEncoder.encode(sendData,"utf-8");
+            // objOutputStrm.writeObject(new String("alt=123.456&addr=beijing"));
+            //String sendData = "123.456;beijing";
+            //String sendData = "alt=123&addr=beijing";
+            //sendData = URLEncoder.encode(sendData);
             //byte[] byteArray = sendData.getBytes();
             JSONObject locJson = new JSONObject();
             try {
@@ -84,13 +94,15 @@ public class gsm_location {
             }
             String sendData = locJson.toString();
 
-            objOutputStrm.writeUTF(sendData);
+            // objOutputStrm.write(sendData.getBytes("UTF-8"));
+            objOutputStrm.print(sendData);
+            //Log.d("httpStr2", sendData);
             objOutputStrm.flush();
             objOutputStrm.close();
 
             // 将内存缓冲区中封装好的完整的HTTP请求电文发送到服务端。
             InputStream inStrm = connection.getInputStream(); // <===注意，实际发送请求的代码段就在这里
-            BufferedReader bufr=new BufferedReader(new InputStreamReader(inStrm));
+            BufferedReader bufr=new BufferedReader(new InputStreamReader(inStrm,"utf-8"));
             String line=null;
             while((line=bufr.readLine())!=null){
                 // response.append(line);
