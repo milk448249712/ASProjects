@@ -87,8 +87,8 @@ public class gsm_location {
             //byte[] byteArray = sendData.getBytes();
             JSONObject locJson = new JSONObject();
             try {
-                locJson.put("lat",123.456);
-                locJson.put("addr","beijing");
+                locJson.put("lat","上海");
+                locJson.put("addr","北京");
             } catch (JSONException e) {
                 e.printStackTrace();
             }

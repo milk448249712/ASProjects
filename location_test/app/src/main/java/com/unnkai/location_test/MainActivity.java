@@ -166,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
                 Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                String httpStr = getHttp.post("http://172.16.24.67:80/php_info.php","123test");
+                String httpStr = getHttp.post("http://172.16.24.67:80/php_info_symlnk.php","123test");
                 // Toast.makeText(this, httpStr, Toast.LENGTH_SHORT).show();
                 Log.d("httpStr",httpStr);
                 Message message = new Message();
