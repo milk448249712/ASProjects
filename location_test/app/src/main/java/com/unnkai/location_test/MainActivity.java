@@ -166,13 +166,13 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
                 Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                String httpStr = getHttp.post("http://172.16.24.67:80/php_info_symlnk.php","123test");
+                String httpStr = getHttp.post("http://192.168.0.104:80/getLoc.php","123test");
                 // Toast.makeText(this, httpStr, Toast.LENGTH_SHORT).show();
                 Log.d("httpStr",httpStr);
                 Message message = new Message();
                 //message.obj = newLoc;
                 //mHandler.sendMessage(message);
-                parseLocToUI(newLoc);
+                //parseLocToUI(newLoc);
                 locInfoDetail stlocInfoTmp = parseLocToUI(newLoc);
                 message.obj = stlocInfoTmp;
                 //handlerSocket.sendMessage(message);
@@ -298,8 +298,10 @@ public class MainActivity extends AppCompatActivity {
                 return null;
             }
             result = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if (result != null) {
+            if (result != null && result.getTime() != lastGpsTime && false) {
                 //Toast.makeText(this, "return gps location", Toast.LENGTH_SHORT).show();
+                lastGpsTime = result.getTime();
+                Log.d("gps3", "gps");
                 return result;
             } else {
                 if(!checkLocationCoarsePermission()) {
@@ -307,6 +309,8 @@ public class MainActivity extends AppCompatActivity {
                     return null;
                 }
                 result = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                //lastGpsTime = result.getTime();
+                Log.d("gps4", "network");
                 //Toast.makeText(this, "return network location", Toast.LENGTH_SHORT).show();
                 return result;
             }
@@ -414,15 +418,9 @@ public class MainActivity extends AppCompatActivity {
         SimpleDateFormat formatter   =   new   SimpleDateFormat   ("yyyy-MM-dd HH:mm:ss");
         Date curDate =  new Date(System.currentTimeMillis());
         String strDate = formatter.format(curDate);
+        // !!! 第一次由于lastGpsTime 为初始值0，所以必定会用gps定位，可能会导致定位不准
         if (newLoc!=null && newLoc.getTime()!=lastGpsTime) {
-            /*editText.append(String.valueOf(newLoc.getLongitude()));
-            editText.append("\n纬度：");
-            editText.append(String.valueOf(newLoc.getLatitude()));
-            editText.append("\ndata from gps");
-            lastGpsTime = newLoc.getTime();
-            String strAdde = getPositionByGeocoder(newLoc);
-            editText.append("\n\n地址："+strAdde);
-            locType = "gps";*/
+            Log.d("gps1", newLoc.getTime()+","+String.valueOf(lastGpsTime));
             stLocInfoDetail.latitude = newLoc.getLatitude();
             stLocInfoDetail.longitude = newLoc.getLongitude();
             stLocInfoDetail.locType = "gps";
@@ -431,6 +429,7 @@ public class MainActivity extends AppCompatActivity {
             lastGpsTime = newLoc.getTime();
         } else {
             newLoc = getBestLocation(lm);
+            Log.d("gps2", newLoc.getTime()+","+String.valueOf(lastGpsTime));
             stLocInfoDetail.latitude = newLoc.getLatitude();
             stLocInfoDetail.longitude = newLoc.getLongitude();
             stLocInfoDetail.locType = "network";

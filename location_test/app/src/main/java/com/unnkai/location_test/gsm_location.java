@@ -12,6 +12,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
 import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -36,8 +37,8 @@ public class gsm_location {
             url = new URL(strURL);
             connection=(HttpURLConnection)url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(8000);
-            connection.setReadTimeout(8000);
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
             InputStream in=connection.getInputStream();
             //下面对获取到的输入流进行读取
             BufferedReader bufr=new BufferedReader(new InputStreamReader(in));
@@ -61,11 +62,12 @@ public class gsm_location {
         HttpURLConnection connection=null;
         URL url= null;
         try {
+            Log.d("httpStr", "111");
             url = new URL(strURL);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
-            //connection.setConnectTimeout(8000);
-            //connection.setReadTimeout(8000);
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
             // 设置容许输出
             connection.setDoOutput(true);
             connection.setDoInput(true);
@@ -108,7 +110,12 @@ public class gsm_location {
                 // response.append(line);
                 response += line;
             }
-        }catch (MalformedURLException e) {
+            Log.d("httpStr", "222");
+        } catch (SocketTimeoutException e) {
+            Log.d("httpStr", "connection timeout");
+            e.printStackTrace();
+        }
+        catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
