@@ -16,10 +16,12 @@ define("port", default=9998, help="run on the given port", type=int)
 class IndexHandler(tornado.web.RequestHandler):
     global MOBILE_STARTUP_NODES
     def get(self):   
-        device_id = self.get_argument('device_id', 'no device id')
-        id_type = self.get_argument('id_type', 'no id type')
-        self.write('<p>device_id:['+device_id+']</p>')
-        self.write('<p>id_type:['+id_type+']</p>')
+        lat = self.get_argument('lat', 'no lat')
+        long = self.get_argument('long', 'no long')
+        target = self.get_argument('target', 'no target')
+        self.write('<p>lat:['+lat+']</p>')
+        self.write('<p>long:['+long+']</p>')
+        self.write('<p>target:['+target+']</p>')
         conn = sqlite3.connect('locationManage.db')
         c = conn.cursor()
         cursor = c.execute('''
@@ -43,7 +45,7 @@ class IndexHandler(tornado.web.RequestHandler):
                 print("Table created successfully")
                 break
         c.execute("INSERT INTO location (ID,lat,long,target,time) \
-            VALUES (NULL, 123.34, 567.89, '"+device_id+"', "+id_type+" )");
+            VALUES (NULL, 123.34, 567.89, '"+lat+"', "+long+" )");
         conn.commit()
         cursor = c.execute("SELECT ID, lat, long, target, time  from location")
         for row in cursor:
