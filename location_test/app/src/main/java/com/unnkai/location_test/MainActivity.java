@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     public final static String EXTRA_MESSAGE = "com.example.myfirstapp.MESSAGE";
 
     private EditText editText;
+    private EditText editText_log;
     private LocationManager lm;
     private static final String TAG = "GpsActivity";
     private int cnt = 0;
@@ -95,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate");
         latlnLog = new locInfoFile("location_test_log.txt",this);
         editText = (EditText) findViewById(R.id.editText);
+        editText_log = (EditText) findViewById(R.id.editText_log);
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         //MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
         // myQueryThread.start();
@@ -102,15 +104,17 @@ public class MainActivity extends AppCompatActivity {
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             // 用户不需要感知
-            Toast.makeText(this, "[test]GPS location not open...", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(this, "[test]GPS location not open...", Toast.LENGTH_SHORT).show();
+            editText_log.setText("GPS location not open.\n");
             // 返回开启GPS导航设置界面
-            // Intent intent_gps_set = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-            // startActivityForResult(intent_gps_set, 0);
-            // return;
+            //Intent intent_gps_set = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            //startActivityForResult(intent_gps_set, 0);
+            //return;
         }
         // 为获取地理位置信息时设置查询条件
         String bestProvider = lm.getBestProvider(getCriteria(), true);
-        Toast.makeText(this, "bestProvider:"+bestProvider, Toast.LENGTH_SHORT).show();
+        // Toast.makeText(this, "bestProvider:"+bestProvider, Toast.LENGTH_SHORT).show();
+        editText_log.append("bestProvider:"+bestProvider+"\n");
         // 获取位置信息
         // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManager.GPS_PROVIDER
         if(!checkLocationFinePermission()) {
@@ -164,6 +168,11 @@ public class MainActivity extends AppCompatActivity {
             {
                 Log.e(TAG, Thread.currentThread().getName() + "run tread i =  " + i);
                 if(!checkLocationFinePermission()) {
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     continue;
                 }
                 Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);

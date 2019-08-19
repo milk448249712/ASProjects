@@ -9,4 +9,9 @@
         android:layout_height="wrap_content"
         android:cursorVisible="false"
         android:editable="false"/>
+    <EditText android:id="@+id/editText_log"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:cursorVisible="false"
+        android:editable="false"/>
 </LinearLayout>
