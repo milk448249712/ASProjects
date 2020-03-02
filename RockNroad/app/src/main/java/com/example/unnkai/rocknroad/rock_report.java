@@ -8,13 +8,27 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.os.Handler;
+import android.os.Message;
+import java.util.Date;
+import java.text.DateFormat;
+import android.widget.EditText;
+import android.widget.TextView;
+import java.text.SimpleDateFormat;
 
 public class rock_report extends AppCompatActivity {
+    private TextView textView;
+    private int cnt = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_rock_report);
+        textView = (TextView)findViewById(R.id.tx1_1);
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date curDate =  new Date(System.currentTimeMillis());
+        String strDate = formatter.format(curDate);
+        textView.setText(strDate); //更新时间
         //Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         //setSupportActionBar(toolbar);
 
@@ -26,6 +40,7 @@ public class rock_report extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });*/
+        new TimeThread().start();
     }
 
     @Override
@@ -49,4 +64,49 @@ public class rock_report extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+    
+    class TimeThread extends Thread {
+        @Override
+        public void run() {
+            do {
+                try {
+                    Thread.sleep(1000);
+                    Message msg = new Message();
+                    msg.what = 1;  //消息(一个整型值)
+                    mHandler.sendMessage(msg);// 每隔1秒发送一个msg给mHandler
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } while (true);
+        }
+    }
+ 
+    //在主线程里面处理消息并更新UI界面
+    private Handler mHandler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case 1:
+                    // long sysTime = System.currentTimeMillis();//获取系统时间
+                    // CharSequence sysTimeStr = DateFormat.format("hh:mm:ss", sysTime);//时间显示格式
+                    SimpleDateFormat formatter = null;
+                    if (cnt == 0) {
+                        formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        cnt = 1;
+                    } else {
+                        formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm ss");
+                        cnt = 0;
+                    }
+                    // SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    Date curDate =  new Date(System.currentTimeMillis());
+                    String strDate = formatter.format(curDate);
+                    textView.setText(strDate); //更新时间
+                    break;
+                default:
+                    break;
+ 
+            }
+        }
+    };
 }

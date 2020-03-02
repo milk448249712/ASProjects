@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="tower_style">
+        <item>转角塔</item>
+        <item>直线塔</item>
+    </string-array>
+    <string-array name="diceng_style">
+        <item>接口文件输入1</item>
+        <item>接口文件输入1</item>
+    </string-array>
+    <string-array name="base_style">
+        <item>掏挖式基础</item>
+        <item>桩式基础</item>
+        <item>板式基础</item>
+        <item>锚杆技术</item>
+    </string-array>
+</resources>
