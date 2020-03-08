@@ -1,6 +1,7 @@
 package com.unnkai.location_test;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
@@ -17,6 +18,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.Criteria;
 import android.support.v4.app.ActivityCompat;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.util.Log;
 import android.provider.Settings;
@@ -28,21 +30,33 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Locale;
 
 // https://www.cnblogs.com/android-blogs/p/5718479.html
 // http://blog.csdn.net/u013334392/article/details/52459635
+
 public class MainActivity extends AppCompatActivity {
     public final static String EXTRA_MESSAGE = "com.example.myfirstapp.MESSAGE";
 
     private EditText editText;
     private EditText editText_log;
+    private TextView tx_backend_log;
+    private TextView tx_loc_listener;
     private LocationManager lm;
     private static final String TAG = "GpsActivity";
     private int cnt = 0;
     private long lastGpsTime = 0;
     private locInfoFile latlnLog = null;
     gsm_location getHttp = new gsm_location();
+
+    // Storage Permissions
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {//这里只加入了读写和相机权限，还可以加入其他权限
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
+    };
+
     //private Handler handler=null;
     //在handler中更新UI
     private Handler mHandler = new Handler(){
@@ -63,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
                 editText.append("\n\n地址："+strAdde);
                 locType = "gps";
             } else {
-                newLoc = getBestLocation(lm);
+                // newLoc = getBestLocation(lm);
                 editText.setText(cnt+"设备位置信息\n\n经度：");
                 editText.append(String.valueOf(newLoc.getLongitude()));
                 editText.append("\n纬度：");
@@ -73,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
                 editText.append("\n\n地址："+strAdde);
                 locType = "net";
             }
+            tx_backend_log.setText("lastGpsTime:"+lastGpsTime);
             String buf2File = String.valueOf(newLoc.getLongitude())+","+String.valueOf(newLoc.getLatitude()+","+locType+","+strDate);
             Log.d("file",buf2File);
             //connectServerWithTCPSocket("test123");
@@ -89,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         //lm.removeUpdates(locationListener);
     }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -97,6 +113,10 @@ public class MainActivity extends AppCompatActivity {
         latlnLog = new locInfoFile("location_test_log.txt",this);
         editText = (EditText) findViewById(R.id.editText);
         editText_log = (EditText) findViewById(R.id.editText_log);
+        tx_backend_log = (TextView) findViewById(R.id.tx_backend_log);
+        tx_loc_listener = (TextView) findViewById(R.id.tx_loc_listener);
+        verifyStoragePermissions(this);
+
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         //MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
         // myQueryThread.start();
@@ -104,13 +124,14 @@ public class MainActivity extends AppCompatActivity {
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             // 用户不需要感知
-            //Toast.makeText(this, "[test]GPS location not open...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "[test]GPS location not open...", Toast.LENGTH_SHORT).show();
             editText_log.setText("GPS location not open.\n");
             // 返回开启GPS导航设置界面
-            //Intent intent_gps_set = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-            //startActivityForResult(intent_gps_set, 0);
+            // Intent intent_gps_set = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            // startActivityForResult(intent_gps_set, 0);
             //return;
         }
+        // getBestLocationProvider();
         // 为获取地理位置信息时设置查询条件
         String bestProvider = lm.getBestProvider(getCriteria(), true);
         // Toast.makeText(this, "bestProvider:"+bestProvider, Toast.LENGTH_SHORT).show();
@@ -119,10 +140,15 @@ public class MainActivity extends AppCompatActivity {
         // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManager.GPS_PROVIDER
         if(!checkLocationFinePermission()) {
             Toast.makeText(this, "gps permission check failed...", Toast.LENGTH_SHORT).show();
+            if(!checkLocationCoarsePermission()){
+                Toast.makeText(this, "gps and BS permission all check failed...", Toast.LENGTH_SHORT).show();
+            }
             return;
         }
         // Location location = lm.getLastKnownLocation(bestProvider);
-        Location location = getBestLocation(lm);
+
+        LocLogs tmpLoclog = new LocLogs();
+        Location location = getBestLocation(lm,tmpLoclog);
         updateView(location);
         // 监听状态
         // lm.addGpsStatusListener(listener);
@@ -134,7 +160,8 @@ public class MainActivity extends AppCompatActivity {
         // 备注：参数2和3，如果参数3不为0，则以参数3为准；参数3为0，则通过时间来定时更新；两者为0，则随时刷新
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
-        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10*1000, 0, locationListener);
+        // lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10*1000, 0, locationListener);
+        lm.requestLocationUpdates(bestProvider, 10*1000, 0, locationListener);
         latlnLog.writeInerFile("红鸡公尾巴红。。。\n");
         String locInof = latlnLog.readInerFile();
         Log.d("file",locInof);
@@ -154,8 +181,12 @@ public class MainActivity extends AppCompatActivity {
             editText.append("\ndata from" + newLoc.locType);
             editText.append("\n\n地址："+newLoc.strAddr);
             cnt++;
+            // getBestLocationProvider();
+            tx_backend_log.setText(null);
+            tx_backend_log.append(newLoc.loclog.log_tx_backend);
         }
     };
+
     Runnable networkTask = new Runnable() {
         @Override
         public void run() {
@@ -183,7 +214,10 @@ public class MainActivity extends AppCompatActivity {
                 //message.obj = newLoc;
                 //mHandler.sendMessage(message);
                 //parseLocToUI(newLoc);
+                LocLogs llog = new LocLogs();
+                newLoc = getBestLocation(lm, llog);
                 locInfoDetail stlocInfoTmp = parseLocToUI(newLoc);
+                stlocInfoTmp.loclog = llog;
                 message.obj = stlocInfoTmp;
                 //handlerSocket.sendMessage(message);
                 handlerSocket.sendMessage(message);
@@ -221,6 +255,7 @@ public class MainActivity extends AppCompatActivity {
     // 位置监听
     private LocationListener locationListener = new LocationListener() {
         /** 位置信息变化时触发*/
+
         @Override
         public void onLocationChanged(Location location) {
             Log.i(TAG, "onLocationChanged");
@@ -230,24 +265,34 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "经度：" + location.getLongitude());
             Log.i(TAG, "纬度：" + location.getLatitude());
             Log.i(TAG, "海拔：" + location.getAltitude());
+            tx_loc_listener.setText(null);
+            tx_loc_listener.append("on location changend：");
+            tx_loc_listener.append("时间：" + location.getTime());
+            tx_loc_listener.append(",经度：" + location.getLongitude());
+            tx_loc_listener.append(",纬度：" + location.getLatitude());
+            tx_loc_listener.append(",海拔：" + location.getAltitude());
         }
 
         /**GPS状态变化时触发*/
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
             Log.i(TAG, "onStatusChanged");
+            tx_loc_listener.setText(null);
             switch (status) {
                 // GPS状态为可见时
                 case LocationProvider.AVAILABLE:
                     Log.i(TAG, "当前GPS状态为可见状态");
+                    tx_loc_listener.append("on status changend AVAIABLE.provider：" + provider);
                     break;
                 // GPS状态为服务区外时
                 case LocationProvider.OUT_OF_SERVICE:
                     Log.i(TAG, "当前GPS状态为服务区外状态");
+                    tx_loc_listener.append("on status changend OUT_OF_SERVICE.provider：" + provider);
                     break;
                 // GPS状态为暂停服务时
                 case LocationProvider.TEMPORARILY_UNAVAILABLE:
                     Log.i(TAG, "当前GPS状态为暂停服务状态");
+                    tx_loc_listener.append("on status changend TEMPORARILY_UNAVAILABLE.provider：" + provider);
                     break;
             }
         }
@@ -300,16 +345,20 @@ public class MainActivity extends AppCompatActivity {
         criteria.setPowerRequirement(Criteria.POWER_LOW);
         return criteria;
     }
-    private Location getBestLocation(LocationManager locationManager) {
+    private Location getBestLocation(LocationManager locationManager, LocLogs llog) {
+        // gps, network, passive
+        llog.log_tx_backend = "getBestLocation:\n";
         Location result = null;
         if (locationManager != null) {
             if(!checkLocationFinePermission()) {
                 Toast.makeText(this, "gps permission check failed...", Toast.LENGTH_SHORT).show();
+                llog.log_tx_backend = llog.log_tx_backend + "gps permission check failed...\n";
                 return null;
             }
             result = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if (result != null && result.getTime() != lastGpsTime && false) {
+            if (result != null && result.getTime() != lastGpsTime) {
                 //Toast.makeText(this, "return gps location", Toast.LENGTH_SHORT).show();
+                llog.log_tx_backend = llog.log_tx_backend + "return gps location, time:"+result.getTime()+"\n";
                 lastGpsTime = result.getTime();
                 Log.d("gps3", "gps");
                 return result;
@@ -322,7 +371,17 @@ public class MainActivity extends AppCompatActivity {
                 //lastGpsTime = result.getTime();
                 Log.d("gps4", "network");
                 //Toast.makeText(this, "return network location", Toast.LENGTH_SHORT).show();
-                return result;
+                if (result != null ) {
+                    llog.log_tx_backend = llog.log_tx_backend + "return network location, time:"+result.getTime()+"\n";
+                    return result;
+                } else {
+                    result = locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+                    if (result != null) {
+                        llog.log_tx_backend = llog.log_tx_backend + "return passive location, time:"+result.getTime()+"\n";
+                        return result;
+                    }
+                }
+                // return result;
             }
         }
         return result;
@@ -419,6 +478,7 @@ public class MainActivity extends AppCompatActivity {
         public String locType;
         public String strAddr;
         public String strDate;
+        public LocLogs loclog;
     }
     private locInfoDetail parseLocToUI(Location newLoc) {
         // Location newLoc = (Location)msg.obj;
@@ -438,13 +498,17 @@ public class MainActivity extends AppCompatActivity {
             stLocInfoDetail.strDate = strDate;
             lastGpsTime = newLoc.getTime();
         } else {
-            newLoc = getBestLocation(lm);
-            Log.d("gps2", newLoc.getTime()+","+String.valueOf(lastGpsTime));
-            stLocInfoDetail.latitude = newLoc.getLatitude();
-            stLocInfoDetail.longitude = newLoc.getLongitude();
-            stLocInfoDetail.locType = "network";
-            stLocInfoDetail.strAddr = getPositionByGeocoder(newLoc);
-            stLocInfoDetail.strDate = strDate;
+            // newLoc = getBestLocation(lm);
+            if (newLoc!=null) {
+                Log.d("gps2", newLoc.getTime() + "," + String.valueOf(lastGpsTime));
+                stLocInfoDetail.latitude = newLoc.getLatitude();
+                stLocInfoDetail.longitude = newLoc.getLongitude();
+                stLocInfoDetail.locType = "network";
+                stLocInfoDetail.strAddr = getPositionByGeocoder(newLoc);
+                stLocInfoDetail.strDate = strDate;
+            } else {
+                Log.d("obj null err:","get nullptr newLoc obj.");
+            }
         }
         return stLocInfoDetail;
     }
@@ -465,4 +529,45 @@ public class MainActivity extends AppCompatActivity {
              e.printStackTrace();
          }
      }
+    public static void verifyStoragePermissions(Activity activity) {
+        for (String per : PERMISSIONS_STORAGE) {
+            int permission = ActivityCompat.checkSelfPermission(activity,
+                    per);
+            if (permission != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(activity, PERMISSIONS_STORAGE,
+                        REQUEST_EXTERNAL_STORAGE);
+                break;
+            }
+        }
+    }
+    private void getBestLocationProvider() {
+        // gps, network, passive
+        LocationManager tmpLm =  (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        List<String> providerList = tmpLm.getProviders(true);
+        ListIterator<String> listIterator = providerList.listIterator();
+        tx_backend_log.setText(null);
+        tx_backend_log.append("provider list:\n");
+        while (listIterator.hasNext()){
+            tx_backend_log.append(listIterator.next() + "\n");
+        }
+        String locProvider;
+        if(providerList.contains(LocationManager.GPS_PROVIDER)) { // gps提供器
+            locProvider = LocationManager.GPS_PROVIDER;
+            tx_backend_log.append("got gps provider\n");
+        } else if(providerList.contains(LocationManager.NETWORK_PROVIDER)) { // 基站网络提供器
+            locProvider = LocationManager.NETWORK_PROVIDER;
+            tx_backend_log.append("network gps provider\n");
+        } else if(providerList.contains(LocationManager.PASSIVE_PROVIDER)) { // passive提供器
+            locProvider = LocationManager.PASSIVE_PROVIDER;
+            tx_backend_log.append("passive gps provider\n");
+        }else {
+            Toast.makeText(MainActivity.this, "No location provider to use",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+    }
+    private class LocLogs{
+        public String log_tx_backend;
+        public String externed;
+    }
 }

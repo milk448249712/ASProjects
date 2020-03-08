@@ -1,17 +1,52 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:orientation="vertical">
-    <EditText android:id="@+id/editText"
+    <LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:cursorVisible="false"
-        android:editable="false"/>
-    <EditText android:id="@+id/editText_log"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:cursorVisible="false"
-        android:editable="false"/>
+        android:orientation="vertical">
+        <EditText android:id="@+id/editText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:cursorVisible="false"
+            android:editable="false"/>
+        <EditText android:id="@+id/editText_log"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:cursorVisible="false"
+            android:editable="false"/>
+    </LinearLayout>
+    <LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:weightSum="20"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/tx_placehold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="18"
+            android:visibility="invisible" />
+        <TextView
+            android:id="@+id/tx_backend_log"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="bottom|end"
+            android:background="#F5F5DC"
+            android:text="hello, coder." />
+        <TextView
+            android:id="@+id/tx_loc_listener"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="bottom|end"
+            android:background="#E5F5DC"
+            android:text="hello, coder." />
+    </LinearLayout>
 </LinearLayout>
