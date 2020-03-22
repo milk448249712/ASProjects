@@ -29,16 +29,31 @@ import org.json.JSONObject;
 //  a funny name to http
 public class gsm_location {
 
-    public String get(String strURL, String getData){
-        HttpURLConnection connection=null;
+    public String get(String strURL, MainActivity.locInfoDetail getData){
+        // join url
+        String param = "?";
+        if(getData != null) {
+            param += "lat=" + getData.latitude;
+            param += "&long=" + getData.longitude;
+            param += "&target=" + getData.deviceId;
+            param += "&loc_time=" + getData.locTime;
+        } else {
+            return "loc info error.";
+        }
         String response = "";
         URL url= null;
         try {
-            url = new URL(strURL);
-            connection=(HttpURLConnection)url.openConnection();
+            url = new URL(strURL + param);
+            HttpURLConnection connection=(HttpURLConnection)url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(3000);
-            connection.setReadTimeout(3000);
+            connection.setRequestProperty("Accept", "application/x-www-from-urlencoded");
+            connection.connect();
+            //connection.setConnectTimeout(3000);
+            //connection.setReadTimeout(3000);
+            Log.d("httpStr", url.toString());
+            if (connection.getResponseCode() != 200) {
+                return "HTTP GET Request Failed with Error code : "  + connection.getResponseCode();
+            }
             InputStream in=connection.getInputStream();
             //下面对获取到的输入流进行读取
             BufferedReader bufr=new BufferedReader(new InputStreamReader(in));
@@ -57,7 +72,8 @@ public class gsm_location {
         return response;
     }
 
-    public String post(String strURL, String getData){
+    // public String post(String strURL, String getData){
+    public String post(String strURL, MainActivity.locInfoDetail locInfo){
         String response = "";
         HttpURLConnection connection=null;
         URL url= null;
@@ -66,8 +82,8 @@ public class gsm_location {
             url = new URL(strURL);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
-            connection.setConnectTimeout(3000);
-            connection.setReadTimeout(3000);
+            connection.setConnectTimeout(2000);
+            connection.setReadTimeout(2000);
             // 设置容许输出
             connection.setDoOutput(true);
             connection.setDoInput(true);

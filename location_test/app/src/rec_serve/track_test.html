@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+	<style type="text/css">
+	body, html,#allmap {width: 100%;height: 100%;overflow: hidden;margin:0;font-family:"微软雅黑";}
+	</style>
+	<script type="text/javascript" src="//api.map.baidu.com/api?type=webgl&v=1.0&ak=tT4DWVArUxnmPjBuPlPDG8TXmHvendG1"></script>
+    <script type="text/javascript" src="//api.map.baidu.com/library/TrackAnimation/src/TrackAnimation_min.js"></script>
+    <title>狗眼监控</title>
+</head>
+<body>
+    <div id="console" style="overflow:scroll; width:1200px; height:100px;"></div>
+	<div id="allmap"></div>
+</body>
+</html>
+<script type="text/javascript">
+    // 请求myfunc.php, 获取位置数据并通过百度地图api展示轨迹
+    var txt = "";
+    var locArr = [];
+    lat_diff = 0.00005; // lat_diff = 0.00001;
+    lng_diff = 0.00005; // lng_diff = 0.00001;
+    last_lat = 0.0;
+    last_lng = 0.0;
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function()  {
+        if (this.readyState == 4 && this.status == 200) {
+             myObj = JSON.parse(this.responseText);
+             var cnt = 1;
+             for (x in myObj) {
+                if (cnt == 44) {
+                    //break;
+                }
+                 txt += cnt+",";
+                 cnt++;
+                 // txt += myObj[x].ID + "," + myObj[x].long + "," + myObj[x].lat + "," + myObj[x].target + "," + myObj[x].recv_time + "<br>";
+                 if ( (Math.abs(parseFloat(myObj[x].lat) - last_lat) < lat_diff) && (parseFloat(Math.abs(myObj[x].long) - last_lng) < lng_diff)) {
+                    txt += "<font color='grey'>" + myObj[x].ID + "," + myObj[x].long + "," + myObj[x].lat + "," + myObj[x].target + "," + myObj[x].recv_time + "</font><br>";
+                 } else {
+                    txt += myObj[x].ID + "," + myObj[x].long + "," + myObj[x].lat + "," + myObj[x].target + "," + myObj[x].recv_time + "<br>";
+                    locArr.push({'lng':myObj[x].long, 'lat':myObj[x].lat});
+                    last_lat = parseFloat(myObj[x].lat);
+                    last_lng = parseFloat(myObj[x].long);
+                 }
+            }
+            document.getElementById("console").innerHTML = txt;
+         }
+    };
+    xmlhttp.open("GET", "myfunc.php", false);   // false 表示会等待服务器的相应
+    xmlhttp.send();
+
+    // GL版命名空间为BMapGL
+    // 按住鼠标右键，修改倾斜角和角度
+    var bmap = new BMapGL.Map("allmap");    // 创建Map实例
+    bmap.centerAndZoom(new BMapGL.Point(116.297611, 40.047363), 17);  // 初始化地图,设置中心点坐标和地图级别
+    bmap.enableScrollWheelZoom(true);     // 开启鼠标滚轮缩放
+    var path = [];
+    //p1 = {'lng': 116.297611,'lat': 40.047363};
+    //p2 = {'lng': 116.307223,'lat': 40.056379};
+    //path.push(p1);
+    //path.push(p2);
+    path = locArr;
+    /*var path = [{
+        'lng': 116.297611,
+        'lat': 40.047363
+    }, {
+        'lng': 116.302839,
+        'lat': 40.048219
+    }, {
+        'lng': 116.308301,
+        'lat': 40.050566
+    }, {
+        'lng': 116.305732,
+        'lat': 40.054957
+    }, {
+        'lng': 116.304754,
+        'lat': 40.057953
+    }, {
+        'lng': 116.306487,
+        'lat': 40.058312
+    }, {
+        'lng': 116.307223,
+        'lat': 40.056379
+    }];*/
+    var point = [];
+    for (var i = 0; i < path.length; i++) {
+        point.push(new BMapGL.Point(path[i].lng, path[i].lat));
+    }
+    var pl = new BMapGL.Polyline(point);
+    setTimeout('start()', 300);
+    function start () {
+        trackAni = new BMapGLLib.TrackAnimation(bmap, pl, {
+            overallView: true,
+            tilt: 0,
+            duration: 5000,
+            delay: 300
+        });
+        trackAni.start();
+    }
+    // https://www.jianshu.com/p/6a0ef26f783a   安卓获取设备信息
+
+</script>
