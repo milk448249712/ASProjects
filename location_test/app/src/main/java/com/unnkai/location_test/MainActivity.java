@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.os.Looper;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -23,6 +24,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.util.Log;
 import android.provider.Settings;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -35,6 +37,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Locale;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.LinkedList;
 
 // https://www.cnblogs.com/android-blogs/p/5718479.html
 // http://blog.csdn.net/u013334392/article/details/52459635
@@ -43,9 +47,9 @@ public class MainActivity extends AppCompatActivity {
     public final static String EXTRA_MESSAGE = "com.example.myfirstapp.MESSAGE";
     public String deviceModel = Build.MODEL;
     public String brand = Build.BRAND;
-    public String display = Build.DISPLAY;
-    public String serial = "";
-    public String deviceId = deviceModel + "-" + brand + "-" + display;
+    // public String display = Build.DISPLAY;
+    //public String serial = "";
+    public String deviceId = deviceModel + "-" + brand;
 
     private EditText editText;
     private EditText editText_log;
@@ -59,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
     private long lastGpsTime = 0;
     private locInfoFile latlnLog = null;
     gsm_location getHttp = new gsm_location();
+    // final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private Location nowLocation = null;
+    LinkedList<Location> locList = new LinkedList<Location>();
 
     // Storage Permissions
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -119,32 +126,32 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        latlnLog = new locInfoFile("location_test_log.txt",this);
+        latlnLog = new locInfoFile("location_test_log.txt", this);
         editText = (EditText) findViewById(R.id.editText);
         editText_log = (EditText) findViewById(R.id.editText_log);
         tx_backend_log = (TextView) findViewById(R.id.tx_backend_log);
         tx_loc_listener = (TextView) findViewById(R.id.tx_loc_listener);
-        try {
+        /*try {
             serial = Build.class.getField("SERIAL").get(null).toString(); //厂商分配的序列号
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (NoSuchFieldException e) {
             e.printStackTrace();
-        }
-        deviceId += serial;
+        }*/
+        deviceId += "-" + Build.PRODUCT;
         verifyStoragePermissions(this);
         try {
-            deviceId = URLEncoder.encode(deviceId,"UTF-8");
-            deviceId = URLEncoder.encode(deviceId,"UTF-8");
+            deviceId = URLEncoder.encode(deviceId, "UTF-8");
+            deviceId = URLEncoder.encode(deviceId, "UTF-8");
         } catch (UnsupportedEncodingException e) {
             Log.e(TAG, String.valueOf(e));
             e.printStackTrace();
         }
         Log.d("httpStr", deviceId);
         lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        //MyQueryLocationThread myQueryThread = new MyQueryLocationThread();
-        // myQueryThread.start();
-        new Thread(networkTask).start();
+        if (true) {
+            new Thread(networkTask).start();
+        }
         // 判断GPS是否正常启动
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             // 用户不需要感知
@@ -155,24 +162,21 @@ public class MainActivity extends AppCompatActivity {
             // startActivityForResult(intent_gps_set, 0);
             //return;
         }
-        // getBestLocationProvider();
         // 为获取地理位置信息时设置查询条件
         String bestProvider = lm.getBestProvider(getCriteria(), true);
-        // Toast.makeText(this, "bestProvider:"+bestProvider, Toast.LENGTH_SHORT).show();
-        editText_log.append("bestProvider:"+bestProvider+"\n");
-        // 获取位置信息
-        // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManager.GPS_PROVIDER
-        if(!checkLocationFinePermission()) {
+        editText_log.append("bestProvider:" + bestProvider + "\n");
+        // 获取位置信息r.GPS_PROVIDER
+        if (!checkLocationFinePermission()) {
+        // 如果不设置查询要求，getLastKnownLocation方法传人的参数为LocationManage
             Toast.makeText(this, "gps permission check failed...", Toast.LENGTH_SHORT).show();
-            if(!checkLocationCoarsePermission()){
+            if (!checkLocationCoarsePermission()) {
                 Toast.makeText(this, "gps and BS permission all check failed...", Toast.LENGTH_SHORT).show();
             }
             return;
         }
-        // Location location = lm.getLastKnownLocation(bestProvider);
 
         LocLogs tmpLoclog = new LocLogs();
-        Location location = getBestLocation(lm,tmpLoclog);
+        Location location = getBestLocation(lm, tmpLoclog);
         updateView(location);
         // 监听状态
         // lm.addGpsStatusListener(listener);
@@ -185,49 +189,59 @@ public class MainActivity extends AppCompatActivity {
         // 1秒更新一次，或最小位移变化超过1米更新一次；
         // 注意：此处更新准确度非常低，推荐在service里面启动一个Thread，在run中sleep(10000);然后执行handler.sendMessage(),更新位置
         // lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10*1000, 0, locationListener);
-        lm.requestLocationUpdates(bestProvider, 10*1000, 0, locationListener);
+        lm.requestLocationUpdates(bestProvider, 10 * 1000, 0.0f, locationListener);
         latlnLog.writeInerFile("红鸡公尾巴红。。。\n");
         String locInof = latlnLog.readInerFile();
-        Log.d("file",locInof);
     }
+
     Handler handlerSocket = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
-            //Bundle data = msg.getData();
-            //String val = data.getString("value");
-            //Log.i("mylog", "请求结果为-->" + val);
-            editText.setText(cnt+"设备位置信息\n\n经度：");
+
             locInfoDetail newLoc = (locInfoDetail) msg.obj;
-            editText.append(String.valueOf(newLoc.longitude));
-            editText.append("\n纬度：");
-            editText.append(String.valueOf(newLoc.latitude));
-            editText.append("\ndata from" + newLoc.locType);
-            editText.append("\n\n地址："+newLoc.strAddr);
-            editText.append("\n\ndeviceId："+newLoc.deviceId);
-            cnt++;
-            // getBestLocationProvider();
+
             tx_backend_log.setText(null);
-            tx_backend_log.append(newLoc.loclog.log_tx_backend);
+            // tx_backend_log.append(newLoc.loclog.log_tx_backend);
             // upload location data
+            // String httpStr = getHttp.get("http://24059ef2.nat123.net/transmit.php",newLoc);
             String httpStr = newLoc.httpResp;
-            // httpStr = getHttp.get("http://24059ef2.nat123.net/transmit.php",newLoc);
             tx_backend_log.append("\nreq to LHS. resp:" + httpStr);  // location handle service
         }
     };
+    /*Thread httpThread = new Thread() {
+        @Override
+        public void run() {
+            super.run();
+            //初始化Looper,一定要写在Handler初始化之前
+            Looper.prepare();
+            //在子线程内部初始化handler即可，发送消息的代码可在主线程任意地方发送
+            handler = new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    super.handleMessage(msg);
+                    //所有的事情处理完成后要退出looper，即终止Looper循环
+                    //这两个方法都可以，有关这两个方法的区别自行寻找答案
+                    handler.getLooper().quit();
+                    handler.getLooper().quitSafely();
+                }
+            };
+
+            //启动Looper循环，否则Handler无法收到消息
+            Looper.loop();
+        }
+    };*/
 
     Runnable networkTask = new Runnable() {
         @Override
         public void run() {
             try {
-                Thread.sleep(5000);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            for(int i = 0; i<10000; i++)
-            {
-                Log.e(TAG, Thread.currentThread().getName() + "run tread i =  " + i);
-                if(!checkLocationFinePermission()) {
+            while(true) {
+                /*if (!checkLocationFinePermission()) {
                     try {
                         Thread.sleep(300);
                     } catch (InterruptedException e) {
@@ -236,31 +250,49 @@ public class MainActivity extends AppCompatActivity {
                     continue;
                 }
                 Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-
                 Message message = new Message();
                 LocLogs llog = new LocLogs();
                 newLoc = getBestLocation(lm, llog);
                 locInfoDetail stlocInfoTmp = parseLocToUI(newLoc);
                 stlocInfoTmp.loclog = llog;
                 stlocInfoTmp.deviceId = deviceId;
-                String httpStr = getHttp.get("http://24059ef2.nat123.net/transmit.php",stlocInfoTmp);
+                String httpStr = getHttp.get("http://24059ef2.nat123.net/transmit.php", stlocInfoTmp);
                 stlocInfoTmp.httpResp = httpStr;
-                message.obj = stlocInfoTmp;
-                handlerSocket.sendMessage(message);
-                // connectServerWithTCPSocket(stlocInfoTmp); // send socket data
+                message.obj = stlocInfoTmp;*/
+                // tx_backend_log.setText("networkTask cnt:"+ cnt++ + "\n");
+
+                // Location tmpLoc = nowLocation;
+                // nowLocation = null;
+                Location tmpLoc = locList.poll();
+                if (tmpLoc!=null) {
+                    // tx_backend_log.append("networkTask cnt:"+ cnt + " loc not null\n");
+                    // Toast.makeText(getApplicationContext(), "networkTask cnt:"+ cnt + " loc not null", Toast.LENGTH_SHORT).show();
+                    locInfoDetail stlocInfoTmp = parseLocToUI(tmpLoc);
+                    String httpStr = getHttp.get("http://24059ef2.nat123.net/transmit.php", stlocInfoTmp);
+                    Message message = new Message();
+                    cnt++;
+                    stlocInfoTmp.httpResp = "cnt:[" + String.valueOf(cnt) + "]" + httpStr;
+                    message.obj = stlocInfoTmp;
+                    handlerSocket.sendMessage(message);
+                }
+
                 try {
-                    Thread.sleep(3000);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-            /*
-            Message msg = new Message();
-            Bundle data = new Bundle();
-            data.putString("value", "请求结果");
-            msg.setData(data);
-            handlerSocket.sendMessage(msg);*/
         }
+        /*Handler handlerHttp = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                locInfoDetail newLoc = (locInfoDetail) msg.obj;
+                String httpStr = getHttp.get("http://24059ef2.nat123.net/transmit.php",newLoc);
+                //String httpStr = newLoc.httpResp;
+                tx_backend_log.append("\nreq to LHS. resp:" + httpStr);  // location handle service
+            }
+        };*/
     };
 
     private boolean checkLocationFinePermission() {
@@ -281,10 +313,9 @@ public class MainActivity extends AppCompatActivity {
     // 位置监听
     private LocationListener locationListener = new LocationListener() {
         /** 位置信息变化时触发*/
-
         @Override
         public void onLocationChanged(Location location) {
-            Log.i(TAG, "onLocationChanged");
+            /*Log.i(TAG, "onLocationChanged");
             Toast.makeText(getApplicationContext(), "on location changed...", Toast.LENGTH_SHORT).show();
             Log.i(TAG, "时间：" + location.getTime());
             Log.i(TAG, "经度：" + location.getLongitude());
@@ -295,9 +326,14 @@ public class MainActivity extends AppCompatActivity {
             tx_loc_listener.append("时间：" + location.getTime());
             tx_loc_listener.append(",经度：" + location.getLongitude());
             tx_loc_listener.append(",纬度：" + location.getLatitude());
-            tx_loc_listener.append(",海拔：" + location.getAltitude());
-        }
+            tx_loc_listener.append(",海拔：" + location.getAltitude());*/
+            updateView(location);
 
+            // String httpStr = getHttp.get("http://24059ef2.nat123.net/transmit.php",stlocInfoTmp);
+            // stlocInfoTmp.httpResp = httpStr;
+            // nowLocation = location;
+            locList.offer(location);
+        }
         /**GPS状态变化时触发*/
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -340,11 +376,25 @@ public class MainActivity extends AppCompatActivity {
     /**实时更新文本内容* @param location*/
     private void updateView(Location location) {
         if (location != null) {
-            //Toast.makeText(this, "provider test123:"+LocationManager.GPS_PROVIDER, Toast.LENGTH_SHORT).show();
-            editText.setText("设备位置信息\n\n经度：");
+            long locTs = location.getTime();
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Date LocDate =  new Date(locTs);
+            String strDate = formatter.format(LocDate);
+            // 解析位置信息
+            String strAddress= getPositionByGeocoder(location);
+
+            editText.setText("设备["+deviceId+"]位置信息:\n\n经度：");
             editText.append(String.valueOf(location.getLongitude()));
             editText.append("\n纬度：");
             editText.append(String.valueOf(location.getLatitude()));
+            editText.append("\n海拔：");
+            editText.append(String.valueOf(location.getAltitude()));
+            editText.append("\n获取该位置的时间：");
+            editText.append(strDate);
+            editText.append("\n"+String.valueOf(locTs));
+            editText.append("\n具体位置信息：");
+            editText.append("\n"+strAddress);
+            editText.append("\n位置队列大小："+locList.size());
         } else {
             // 清空EditText对象
             editText.getEditableText().clear();
@@ -381,10 +431,8 @@ public class MainActivity extends AppCompatActivity {
             }
             result = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             if (result != null && result.getTime() != lastGpsTime) {
-                //Toast.makeText(this, "return gps location", Toast.LENGTH_SHORT).show();
                 llog.log_tx_backend = llog.log_tx_backend + "return gps location, time:"+result.getTime()+"\n";
                 lastGpsTime = result.getTime();
-                Log.d("gps3", "gps");
                 return result;
             } else {
                 if(!checkLocationCoarsePermission()) {
@@ -392,9 +440,6 @@ public class MainActivity extends AppCompatActivity {
                     return null;
                 }
                 result = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                //lastGpsTime = result.getTime();
-                Log.d("gps4", "network");
-                //Toast.makeText(this, "return network location", Toast.LENGTH_SHORT).show();
                 if (result != null ) {
                     llog.log_tx_backend = llog.log_tx_backend + "return network location, time:"+result.getTime()+"\n";
                     return result;
@@ -405,7 +450,6 @@ public class MainActivity extends AppCompatActivity {
                         return result;
                     }
                 }
-                // return result;
             }
         }
         return result;
@@ -468,48 +512,20 @@ public class MainActivity extends AppCompatActivity {
         }
         return strPositon;
     }
-    /*public class MyQueryLocationThread extends Thread {
-        //继承Thread类，并改写其run方法
-        private final static String TAG = "My Thread ===> ";
-        public void run(){
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            Log.d(TAG, "run");
-            for(int i = 0; i<10000; i++)
-            {
-                Log.e(TAG, Thread.currentThread().getName() + "run tread i =  " + i);
-                if(!checkLocationFinePermission()) {
-                    continue;
-                }
-                Location newLoc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                Message message = new Message();
-                message.obj = newLoc;
-                mHandler.sendMessage(message);
-                try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }*/
+
     public class locInfoDetail{
         public double longitude;
         public double latitude;
         public String deviceId;
-        public int locTime;
+        public long locTime;
         public String httpResp;
         public String locType;
         public String strAddr;
         public String strDate;
         public LocLogs loclog;
     }
+
     private locInfoDetail parseLocToUI(Location newLoc) {
-        // Location newLoc = (Location)msg.obj;
-        // editText.setText(cnt+"设备位置信息\n\n经度：");
         locInfoDetail stLocInfoDetail = new locInfoDetail();
         String locType = "";
         SimpleDateFormat formatter   =   new   SimpleDateFormat   ("yyyy-MM-dd HH:mm:ss");
@@ -539,8 +555,9 @@ public class MainActivity extends AppCompatActivity {
         if (newLoc != null) {
             stLocInfoDetail.latitude = newLoc.getLatitude();
             stLocInfoDetail.longitude = newLoc.getLongitude();
+            stLocInfoDetail.deviceId = deviceId;
+            stLocInfoDetail.locTime = newLoc.getTime() / 1000;  // ms -> s
             stLocInfoDetail.locType = newLoc.getProvider();
-            // stLocInfoDetail.locType = "gps";
             stLocInfoDetail.strAddr = getPositionByGeocoder(newLoc);
             stLocInfoDetail.strDate = strDate;
             lastGpsTime = newLoc.getTime();
@@ -548,23 +565,22 @@ public class MainActivity extends AppCompatActivity {
         return stLocInfoDetail;
     }
 
-     private void connectServerWithTCPSocket(locInfoDetail locInfo) {
-         Socket socket;
-         try {// 创建一个Socket对象，并指定服务端的IP及端口号
-             socket = new Socket("192.168.0.104", 6666);
-             /** 或创建一个报文，使用BufferedWriter写入,看你的需求 **/
-            //String socketData = "[2143213;21343fjks;213]";
-             String socketData = String.valueOf(locInfo.longitude)+";"+String.valueOf(locInfo.latitude)+";"+locInfo.strAddr+";"+locInfo.locType+";"+locInfo.strDate;
-             //String socketData = locInfo.strAddr;
+    private void connectServerWithTCPSocket(locInfoDetail locInfo) {
+        Socket socket;
+        try {// 创建一个Socket对象，并指定服务端的IP及端口号
+            socket = new Socket("192.168.0.104", 6666);
+            /** 或创建一个报文，使用BufferedWriter写入,看你的需求 **/
+            String socketData = String.valueOf(locInfo.longitude)+";"+String.valueOf(locInfo.latitude)+";"+locInfo.strAddr+";"+locInfo.locType+";"+locInfo.strDate;
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(),"gb2312"));
             writer.write(socketData);
             writer.flush();
-         } catch (Exception e) {
-             Log.e("socket error 1", String.valueOf(e),e);
-             e.printStackTrace();
-         }
-     }
-    public static void verifyStoragePermissions(Activity activity) {
+        } catch (Exception e) {
+            Log.e("socket error 1", String.valueOf(e),e);
+            e.printStackTrace();
+        }
+    }
+
+     public static void verifyStoragePermissions(Activity activity) {
         for (String per : PERMISSIONS_STORAGE) {
             int permission = ActivityCompat.checkSelfPermission(activity,
                     per);
@@ -575,32 +591,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-    /*private void getBestLocationProvider() {
-        // gps, network, passive
-        LocationManager tmpLm =  (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        List<String> providerList = tmpLm.getProviders(true);
-        ListIterator<String> listIterator = providerList.listIterator();
-        tx_backend_log.setText(null);
-        tx_backend_log.append("provider list:\n");
-        while (listIterator.hasNext()){
-            tx_backend_log.append(listIterator.next() + "\n");
-        }
-        String locProvider;
-        if(providerList.contains(LocationManager.GPS_PROVIDER)) { // gps提供器
-            locProvider = LocationManager.GPS_PROVIDER;
-            tx_backend_log.append("got gps provider\n");
-        } else if(providerList.contains(LocationManager.NETWORK_PROVIDER)) { // 基站网络提供器
-            locProvider = LocationManager.NETWORK_PROVIDER;
-            tx_backend_log.append("network gps provider\n");
-        } else if(providerList.contains(LocationManager.PASSIVE_PROVIDER)) { // passive提供器
-            locProvider = LocationManager.PASSIVE_PROVIDER;
-            tx_backend_log.append("passive gps provider\n");
-        }else {
-            Toast.makeText(MainActivity.this, "No location provider to use",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-    }*/
+
     private class LocLogs{
         public String log_tx_backend;
         public String externed;

@@ -13,7 +13,7 @@ import time, datetime
 from tornado.options import define, options
  
 print("你好，世界")
-define("port", default=9998, help="run on the given port", type=int)
+define("port", default=8080, help="run on the given port", type=int)
 
 class IndexHandler(tornado.web.RequestHandler):
     global MOBILE_STARTUP_NODES
@@ -21,37 +21,51 @@ class IndexHandler(tornado.web.RequestHandler):
         lat = self.get_argument('lat', 'no lat')
         long = self.get_argument('long', 'no long')
         target = self.get_argument('target', 'no target')
+        loc_time = self.get_argument('loc_time', 'no loc_time')
         #self.write('<p>lat:['+lat+']</p>')
         #self.write('<p>long:['+long+']</p>')
         #self.write('<p>target:['+target+']</p>')
+        #time.sleep(6)
+        strTime =  time.strftime("%Y_%m_%d", time.localtime())
+        table_name = "location_" + strTime
         conn = sqlite3.connect('locationManage.db')
         c = conn.cursor()
-        cursor = c.execute('''
-            SELECT count(*) FROM sqlite_master
-            WHERE type='table' AND
-            name='location';''')
+        select_table = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='" + table_name + "';"
+        #cursor = c.execute('''
+        #    SELECT count(*) FROM sqlite_master
+        #    WHERE type='table' AND
+        #    name='
+        #    ''' + table_name + 
+        #    '''
+        #    ';
+        #    ''')
+        cursor = c.execute(select_table)
         for row in cursor:
             if row[0] == 1 :
                 print("table is exists.")
                 break
             else :
-                c.execute('''CREATE TABLE location
+                c.execute('''CREATE TABLE 
+                    ''' + table_name +
+                    '''
                     (ID INTEGER PRIMARY KEY AUTOINCREMENT     NOT NULL,
                     lat           REAL    NOT NULL,
                     long            REAL     NOT NULL,
                     target        TEXT,
+                    loc_time        TEXT,
                     recv_time         TEXT);''')
                 conn.commit()
                 print("Table created successfully")
                 break
-        sql_cmd = "INSERT INTO location (ID,lat,long,target,recv_time)"
+        sql_cmd = "INSERT INTO " + table_name + "(ID,lat,long,target,loc_time,recv_time)"
         sql_cmd += " VALUES (NULL, {}, {}".format(lat,long)
-        sql_cmd += ",\"{}\",{});".format(target,"strftime('%s','now')")
+        sql_cmd += ",\"{}\",\"{}\"".format(target,loc_time)
+        sql_cmd += ",{});".format("strftime('%s','now')")
         print(sql_cmd)
         try:
             c.execute(sql_cmd)
             conn.commit()
-            cursor = c.execute("SELECT ID, lat, long, target, recv_time  from location")
+            #cursor = c.execute("SELECT ID, lat, long, target, recv_time  from location")
             #for row in cursor:
             #   self.write("<p>ID = "+str(row[0]))
             #   self.write("lat = "+str(row[1]))

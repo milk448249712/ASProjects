@@ -48,8 +48,8 @@ public class gsm_location {
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Accept", "application/x-www-from-urlencoded");
             connection.connect();
-            //connection.setConnectTimeout(3000);
-            //connection.setReadTimeout(3000);
+            connection.setConnectTimeout(3000);
+            connection.setReadTimeout(3000);
             Log.d("httpStr", url.toString());
             if (connection.getResponseCode() != 200) {
                 return "HTTP GET Request Failed with Error code : "  + connection.getResponseCode();
@@ -65,8 +65,10 @@ public class gsm_location {
                 response += line;
             }
         } catch (MalformedURLException e) {
+            response = "[MalformedURLExceptio]" + String.valueOf(e);
             e.printStackTrace();
         } catch (IOException e) {
+            response = "[IOException]" + String.valueOf(e);
             e.printStackTrace();
         }
         return response;
